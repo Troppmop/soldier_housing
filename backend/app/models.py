@@ -7,6 +7,7 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String, unique=True, index=True, nullable=False)
     full_name = Column(String, nullable=True)
+    phone = Column(String, nullable=True)
     hashed_password = Column(String, nullable=False)
     is_admin = Column(Boolean, default=False)
     apartments = relationship("Apartment", back_populates="owner")
@@ -28,7 +29,18 @@ class Application(Base):
     __tablename__ = "applications"
     id = Column(Integer, primary_key=True, index=True)
     message = Column(Text)
+    status = Column(String, default="pending")
     applicant_id = Column(Integer, ForeignKey("users.id"))
     apartment_id = Column(Integer, ForeignKey("apartments.id"))
     applicant = relationship("User", back_populates="applications")
     apartment = relationship("Apartment", back_populates="applications")
+
+
+class Notification(Base):
+    __tablename__ = "notifications"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
+    message = Column(Text)
+    is_read = Column(Boolean, default=False)
+    created_at = Column(String, nullable=True)
+    user = relationship("User")

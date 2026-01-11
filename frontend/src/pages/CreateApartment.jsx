@@ -22,16 +22,67 @@ export default function CreateApartment(){
   }
 
   return (
-    <div className="max-w-md mx-auto bg-white p-4 rounded shadow">
-      <h2 className="text-lg font-semibold mb-2">Post Apartment</h2>
-      <form onSubmit={submit} className="space-y-3">
-        <input value={title} onChange={e=>setTitle(e.target.value)} placeholder="Title" className="w-full p-2 border rounded" />
-        <input value={location} onChange={e=>setLocation(e.target.value)} placeholder="Location" className="w-full p-2 border rounded" />
-        <input value={rooms} onChange={e=>setRooms(parseInt(e.target.value||1))} type="number" placeholder="Rooms" className="w-full p-2 border rounded" />
-        <input value={rent} onChange={e=>setRent(parseInt(e.target.value||0))} type="number" placeholder="Rent" className="w-full p-2 border rounded" />
-        <textarea value={desc} onChange={e=>setDesc(e.target.value)} placeholder="Description" className="w-full p-2 border rounded" />
+    <div className="max-w-xl mx-auto bg-white p-6 rounded-xl shadow-lg mt-4">
+      <h2 className="text-xl font-semibold mb-4">Post Apartment</h2>
+      <form onSubmit={submit} className="space-y-4" aria-label="Create apartment form">
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Title</label>
+          <input
+            value={title}
+            onChange={e=>setTitle(e.target.value)}
+            placeholder="Short headline, e.g. 'Cozy 1BR near base'"
+            className="w-full p-3 border rounded-lg"
+            aria-required="true"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Location</label>
+          <input
+            value={location}
+            onChange={e=>setLocation(e.target.value)}
+            placeholder="Neighborhood, city or nearby landmark"
+            className="w-full p-3 border rounded-lg"
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Rooms</label>
+            <input
+              value={rooms}
+              onChange={e=>setRooms(Math.max(1, parseInt(e.target.value||1)))}
+              type="number"
+              min="1"
+              className="w-full p-3 border rounded-lg"
+              aria-label="Number of rooms"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Rent (₪)</label>
+            <input
+              value={rent}
+              onChange={e=>setRent(Math.max(0, parseInt(e.target.value||0)))}
+              type="number"
+              min="0"
+              className="w-full p-3 border rounded-lg"
+              aria-label="Monthly rent"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
+          <textarea
+            value={desc}
+            onChange={e=>setDesc(e.target.value)}
+            placeholder="Add details: utilities, pets, available from, contact preferences, photos URL..."
+            className="w-full p-3 border rounded-lg min-h-[120px]"
+          />
+        </div>
+
         <div className="flex justify-end">
-          <button className="bg-sky-600 text-white px-4 py-2 rounded">Post</button>
+          <button type="submit" className="bg-emerald-700 text-white px-4 py-2 rounded-lg">Post Apartment</button>
         </div>
       </form>
     </div>

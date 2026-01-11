@@ -1,43 +1,98 @@
 import React, {useEffect, useState} from 'react'
 import { listApartments, applyApartment } from '../api'
+import { useAuth } from '../AuthContext'
+import Modal from '../components/Modal'
+
+function SkeletonCard(){
+  return (
+    <div className="bg-white p-4 rounded-xl shadow-md animate-pulse">
+      <div className="h-6 bg-slate-200 rounded mb-3 w-3/4" />
+      <div className="h-4 bg-slate-200 rounded mb-2 w-1/2" />
+      <div className="h-20 bg-slate-200 rounded" />
+    </div>
+  )
+}
 
 export default function Apartments(){
   const [apartments, setApartments] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [selected, setSelected] = useState(null)
+  const [message, setMessage] = useState('')
+  const { user } = useAuth()
 
   useEffect(()=>{
     fetchList()
   },[])
   async function fetchList(){
-    const data = await listApartments()
-    setApartments(data)
+    setLoading(true)
+    try{
+      const data = await listApartments()
+      setApartments(data)
+    }catch(e){
+      console.error(e)
+    }finally{
+      setLoading(false)
+    }
   }
 
-  async function apply(id){
-    const msg = prompt('Message to owner (optional)')
+  async function submitApply(){
+    if(!selected) return
     try{
-      await applyApartment(id, msg)
-      alert('Applied')
+      await applyApartment(selected.id, message)
+      alert('Applied — owner will be notified')
+      setSelected(null)
+      setMessage('')
     }catch(e){
       alert('You must login to apply')
     }
   }
 
   return (
-    <div className="space-y-4">
-      {apartments.map(a=> (
-        <div key={a.id} className="bg-white p-4 rounded shadow">
-          <div className="flex justify-between items-start">
-            <div>
-              <h3 className="font-semibold">{a.title}</h3>
-              <div className="text-sm text-slate-500">{a.location} • ${a.rent}/mo • {a.rooms} rooms</div>
-            </div>
-            <div className="text-right">
-              <button onClick={()=>apply(a.id)} className="bg-sky-600 text-white px-3 py-1 rounded">Apply</button>
-            </div>
-          </div>
-          <p className="mt-2 text-sm text-slate-700">{a.description}</p>
+    <div className="pb-28">
+      {loading ? (
+        <div className="space-y-4">
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
         </div>
-      ))}
+      ) : (
+        <div className="grid gap-4">
+          {apartments.map(a=> (
+            <div key={a.id} className="bg-white p-4 rounded-xl shadow-md">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="font-semibold text-lg">{a.title}</h3>
+                  <div className="text-sm text-slate-500">{a.location} • ${a.rent}/mo • {a.rooms} rooms</div>
+                  <div className="text-xs text-slate-400 mt-1">Posted by: {a.owner_name ? a.owner_name : (a.owner_id ? `user#${a.owner_id}` : '—')}</div>
+                </div>
+                <div className="text-right">
+                  {user && user.id === a.owner_id ? (
+                    <button disabled className="bg-slate-200 text-slate-500 px-4 py-2 rounded-lg">Your listing</button>
+                  ) : (
+                    <button onClick={()=>setSelected(a)} className="bg-emerald-700 text-white px-4 py-2 rounded-lg">Apply</button>
+                  )}
+                </div>
+              </div>
+              <p className="mt-3 text-sm text-slate-700">{a.description}</p>
+            </div>
+          ))}
+          {!apartments.length && <div className="text-center text-slate-500">No apartments posted yet.</div>}
+        </div>
+      )}
+
+      <Modal open={!!selected} title={selected?.title || "Apply"} onClose={()=>setSelected(null)}>
+        <form onSubmit={(e)=>{ e.preventDefault(); submitApply(); }} className="space-y-3">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Message to owner (optional)</label>
+            <textarea value={message} onChange={e=>setMessage(e.target.value)} placeholder="Introduce yourself, availability, preferred move-in date, anything helpful." className="w-full p-3 border rounded min-h-[100px]" />
+            <div className="text-xs text-slate-400 mt-1">Be concise — owners appreciate clarity.</div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={()=>setSelected(null)} className="px-4 py-2">Cancel</button>
+            <button type="submit" className="bg-emerald-700 text-white px-4 py-2 rounded">Send Application</button>
+          </div>
+        </form>
+      </Modal>
     </div>
   )
 }

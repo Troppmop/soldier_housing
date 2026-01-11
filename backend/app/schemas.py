@@ -12,11 +12,23 @@ class UserCreate(BaseModel):
     email: EmailStr
     password: str
     full_name: Optional[str] = None
+    phone: Optional[str] = None
+
+
+class UserUpdate(BaseModel):
+    full_name: Optional[str] = None
+    phone: Optional[str] = None
+
+
+class PasswordChange(BaseModel):
+    current_password: str
+    new_password: str
 
 class UserOut(BaseModel):
     id: int
     email: EmailStr
     full_name: Optional[str]
+    phone: Optional[str]
     is_admin: bool
     class Config:
         orm_mode = True
@@ -34,16 +46,44 @@ class ApartmentCreate(ApartmentBase):
 class ApartmentOut(ApartmentBase):
     id: int
     owner_id: int
+    owner_name: Optional[str]
+    class Config:
+        orm_mode = True
+
+
+class OwnerApplicationsOut(BaseModel):
+    apartment: dict
+    applications: list
     class Config:
         orm_mode = True
 
 class ApplicationCreate(BaseModel):
     message: Optional[str] = None
 
+
 class ApplicationOut(BaseModel):
     id: int
     message: Optional[str]
+    status: str
     applicant_id: int
+    applicant_name: Optional[str]
+    applicant_phone: Optional[str]
     apartment_id: int
+    class Config:
+        orm_mode = True
+
+
+class ApplicationDetailOut(BaseModel):
+    id: int
+    message: Optional[str]
+    status: str
+    applicant_id: int
+    applicant_name: Optional[str]
+    applicant_phone: Optional[str]
+    owner_id: int
+    owner_name: Optional[str]
+    owner_phone: Optional[str]
+    apartment_id: int
+    apartment_title: Optional[str]
     class Config:
         orm_mode = True
