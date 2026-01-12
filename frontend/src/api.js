@@ -18,11 +18,14 @@ export async function login(email, password){
   form.append('username', email)
   form.append('password', password)
   try{
-    const resp = await API.post('/auth/token', form, { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } })
+    const tokenUrl = new URL('/auth/token', base).toString()
+    console.log('POST token to', tokenUrl)
+    const resp = await axios.post(tokenUrl, form, { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } })
+    console.log('Login resp status', resp.status)
     localStorage.setItem('token', resp.data.access_token)
     return resp.data
   }catch(err){
-    console.error('Login error response:', err && err.response ? err.response.status : err)
+    console.error('Login error response:', err && err.response ? err.response.status : err, err.response && err.response.data)
     throw err
   }
 }
