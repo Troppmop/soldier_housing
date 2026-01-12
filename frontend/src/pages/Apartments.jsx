@@ -1,5 +1,5 @@
 import React, {useEffect, useState} from 'react'
-import { listApartments, applyApartment } from '../api'
+import { listApartments, applyApartment, getApartmentsApplied } from '../api'
 import { useAuth } from '../AuthContext'
 import Modal from '../components/Modal'
 
@@ -18,6 +18,7 @@ export default function Apartments(){
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState(null)
   const [message, setMessage] = useState('')
+    const [appliedMap, setAppliedMap] = useState({})
   const { user } = useAuth()
 
   useEffect(()=>{
@@ -41,11 +42,24 @@ export default function Apartments(){
       await applyApartment(selected.id, message)
       alert('Applied — owner will be notified')
       setSelected(null)
-      setMessage('')
+        setMessage('')
+        setAppliedMap(prev=>({ ...prev, [selected.id]: true }))
     }catch(e){
       alert('You must login to apply')
     }
   }
+  
+  useEffect(()=>{
+    async function fetchApplied(){
+      if(!user || !apartments.length) return
+      try{
+        const ids = apartments.map(a=>a.id)
+        const r = await getApartmentsApplied(ids)
+        setAppliedMap(r.data.applied || {})
+      }catch(e){ console.error(e) }
+    }
+    fetchApplied()
+  },[apartments, user])
 
   return (
     <div className="pb-28">
@@ -66,8 +80,10 @@ export default function Apartments(){
                   <div className="text-xs text-slate-400 mt-1">Posted by: {a.owner_name ? a.owner_name : (a.owner_id ? `user#${a.owner_id}` : '—')}</div>
                 </div>
                 <div className="text-right">
-                  {user && user.id === a.owner_id ? (
+                  {user && (user.id === a.owner_id || user.is_admin) ? (
                     <button disabled className="bg-slate-200 text-slate-500 px-4 py-2 rounded-lg">Your listing</button>
+                  ) : appliedMap[a.id] ? (
+                    <button disabled className="bg-slate-200 text-slate-500 px-4 py-2 rounded-lg">Applied</button>
                   ) : (
                     <button onClick={()=>setSelected(a)} className="bg-emerald-700 text-white px-4 py-2 rounded-lg">Apply</button>
                   )}

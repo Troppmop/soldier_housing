@@ -56,6 +56,14 @@ export async function applyApartment(id, message){
   return API.post(`/apartments/${id}/apply`, { message }, authHeaders())
 }
 
+export async function getApartmentApplied(id){
+  return API.get(`/apartments/${id}/applied`, authHeaders())
+}
+
+export async function getApartmentsApplied(ids){
+  return API.post('/apartments/applied', { ids }, authHeaders())
+}
+
 export async function getCurrentUser(){
   const resp = await API.get('/users/me', authHeaders())
   return resp.data

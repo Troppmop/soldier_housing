@@ -157,6 +157,13 @@ def apply_apartment(apartment_id: int, application: schemas.ApplicationCreate, d
     # prevent owners from applying to their own listing
     if ap.owner_id and ap.owner_id == current_user.id:
         raise HTTPException(status_code=400, detail="Cannot apply to your own apartment")
+    # prevent admin users from applying
+    if getattr(current_user, 'is_admin', False):
+        raise HTTPException(status_code=403, detail="Admins cannot apply to apartments")
+    # prevent duplicate applications by same user
+    existing = db.query(models.Application).filter(models.Application.apartment_id==apartment_id, models.Application.applicant_id==current_user.id).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Already applied to this apartment")
     a = crud.apply_to_apartment(db, applicant_id=current_user.id, apartment_id=apartment_id, message=application.message)
     applicant = None
     from .crud import list_notifications
@@ -171,6 +178,26 @@ def apply_apartment(apartment_id: int, application: schemas.ApplicationCreate, d
         'applicant_phone': None,
         'apartment_id': a.apartment_id,
     }
+
+
+@app.get('/apartments/{apartment_id}/applied')
+def apartment_applied(apartment_id: int, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
+    # returns whether the authenticated user has already applied to this apartment
+    a = db.query(models.Application).filter(models.Application.apartment_id==apartment_id, models.Application.applicant_id==current_user.id).first()
+    return {'applied': True if a else False}
+
+
+@app.post('/apartments/applied')
+def apartments_applied(payload: dict, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
+    # Expect payload: { "ids": [1,2,3] }
+    ids = payload.get('ids') if isinstance(payload, dict) else None
+    if not ids or not isinstance(ids, list):
+        return {'applied': {}}
+    # query for applications by this user for the given apartment ids
+    rows = db.query(models.Application.apartment_id).filter(models.Application.apartment_id.in_(ids), models.Application.applicant_id==current_user.id).all()
+    applied_ids = {r[0] for r in rows}
+    mapping = {i: (i in applied_ids) for i in ids}
+    return {'applied': mapping}
 
 
 @app.get('/owner/applications')
