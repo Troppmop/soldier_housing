@@ -2,8 +2,9 @@ from sqlalchemy.orm import Session
 from . import models, schemas
 from passlib.context import CryptContext
 
-# Use Argon2 to avoid bcrypt's 72-byte password limit and platform-specific bcrypt backend issues
-pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
+# Support both Argon2 and bcrypt so existing bcrypt-hashed passwords still verify.
+# Prefer Argon2 for new hashes but accept bcrypt for legacy users during migration.
+pwd_context = CryptContext(schemes=["argon2", "bcrypt"], deprecated="auto")
 
 # user
 def get_user_by_email(db: Session, email: str):
