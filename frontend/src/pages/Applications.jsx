@@ -42,7 +42,7 @@ export default function Applications(){
             ))}
           </div>
         </div>
-      ))}
+      )) : null}
       {!data.length && <div className="text-slate-500">No applications yet.</div>}
     </div>
   )
