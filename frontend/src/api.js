@@ -17,9 +17,14 @@ export async function login(email, password){
   const form = new URLSearchParams()
   form.append('username', email)
   form.append('password', password)
-  const resp = await API.post('/auth/token', form)
-  localStorage.setItem('token', resp.data.access_token)
-  return resp.data
+  try{
+    const resp = await API.post('/auth/token', form, { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } })
+    localStorage.setItem('token', resp.data.access_token)
+    return resp.data
+  }catch(err){
+    console.error('Login error response:', err && err.response ? err.response.status : err)
+    throw err
+  }
 }
 
 export function authHeaders(){
