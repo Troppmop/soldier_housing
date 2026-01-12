@@ -33,6 +33,7 @@ export function AuthProvider({ children }){
   const login = async (email, password) => {
     await api.login(email, password)
     const u = await api.getCurrentUser()
+    console.log('Auth login user:', u)
     setUser(u)
     return u
   }

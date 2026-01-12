@@ -10,15 +10,27 @@ export default function Admin(){
   async function fetchAll(){
     try{
       const u = await getAdminUsers()
-      setUsers(u.data)
+      const ud = u && u.data ? u.data : []
+      if(!Array.isArray(ud)){
+        console.error('/admin/users returned unexpected shape', ud)
+      }
+      setUsers(Array.isArray(ud) ? ud : [])
     }catch(e){ console.error(e) }
     try{
       const a = await getAdminApartments()
-      setAps(a.data)
+      const ad = a && a.data ? a.data : []
+      if(!Array.isArray(ad)){
+        console.error('/admin/apartments returned unexpected shape', ad)
+      }
+      setAps(Array.isArray(ad) ? ad : [])
     }catch(e){ console.error(e) }
     try{
       const r = await getAdminApplications()
-      setApps(r.data)
+      const rd = r && r.data ? r.data : []
+      if(!Array.isArray(rd)){
+        console.error('/admin/applications returned unexpected shape', rd)
+      }
+      setApps(Array.isArray(rd) ? rd : [])
     }catch(e){ console.error(e) }
   }
 

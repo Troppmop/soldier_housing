@@ -9,6 +9,8 @@ export default function Notifications(){
     try{ const r = await getNotifications(); setNotes(r.data) }catch(e){ console.error(e) }
   }
 
+  const safeNotes = Array.isArray(notes) ? notes : []
+
   async function mark(id){
     try{ await markNotificationRead(id); fetchNotes() }catch(e){ console.error(e) }
   }
@@ -17,7 +19,7 @@ export default function Notifications(){
     <div className="max-w-xl mx-auto">
       <h2 className="text-xl font-semibold mb-3">Notifications</h2>
       <div className="space-y-2">
-        {notes.map(n=> (
+        {safeNotes.map(n=> (
           <div key={n.id} className={`p-3 rounded ${n.is_read? 'bg-white': 'bg-emerald-50'}`}>
             <div className="flex justify-between items-start">
               <div>{n.message}</div>

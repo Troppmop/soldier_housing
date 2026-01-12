@@ -4,6 +4,8 @@ import { useAuth } from '../AuthContext'
 import Modal from '../components/Modal'
 
 function SkeletonCard(){
+  const list = Array.isArray(apartments) ? apartments : []
+
   return (
     <div className="bg-white p-4 rounded-xl shadow-md animate-pulse">
       <div className="h-6 bg-slate-200 rounded mb-3 w-3/4" />
@@ -51,9 +53,10 @@ export default function Apartments(){
   
   useEffect(()=>{
     async function fetchApplied(){
-      if(!user || !apartments.length) return
+      if(!user) return
       try{
-        const ids = apartments.map(a=>a.id)
+        const ids = Array.isArray(apartments) ? apartments.map(a=>a.id) : []
+        if(!ids.length) return
         const r = await getApartmentsApplied(ids)
         setAppliedMap(r.data.applied || {})
       }catch(e){ console.error(e) }
@@ -71,7 +74,7 @@ export default function Apartments(){
         </div>
       ) : (
         <div className="grid gap-4">
-          {apartments.map(a=> (
+          {list.map(a=> (
             <div key={a.id} className="bg-white p-4 rounded-xl shadow-md">
               <div className="flex justify-between items-start">
                 <div>

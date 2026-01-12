@@ -45,7 +45,11 @@ export async function markNotificationRead(id){
 
 export async function listApartments(){
   const resp = await API.get('/apartments')
-  return resp.data
+  const data = resp.data
+  if (Array.isArray(data)) return data
+  if (data && Array.isArray(data.apartments)) return data.apartments
+  console.error('Unexpected /apartments response shape', data)
+  return []
 }
 
 export async function createApartment(data){

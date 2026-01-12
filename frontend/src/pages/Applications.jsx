@@ -23,11 +23,11 @@ export default function Applications(){
   return (
     <div className="max-w-xl mx-auto space-y-4">
       <h2 className="text-xl font-semibold">Applications</h2>
-      {data.map(group=> (
+      {Array.isArray(data) ? data.map(group=> (
         <div key={group.apartment.id} className="bg-white p-4 rounded shadow">
           <h3 className="font-semibold">{group.apartment.title}</h3>
           <div className="mt-3 space-y-2">
-            {group.applications.map(a=> (
+            {(Array.isArray(group.applications) ? group.applications : []).map(a=> (
               <div key={a.id} className="flex justify-between items-start bg-slate-50 p-3 rounded">
                 <div>
                   <div className="font-medium">{a.applicant_name || `user#${a.applicant_id}`}</div>
