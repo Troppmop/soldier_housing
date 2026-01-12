@@ -13,6 +13,7 @@ import Admin from './pages/Admin'
 import Profile from './pages/Profile'
 import { AuthProvider, useAuth } from './AuthContext'
 import BottomNav from './components/BottomNav'
+import ErrorBoundary from './components/ErrorBoundary'
 
 // Top header removed — navigation now on bottom for mobile-first UX
 
@@ -33,7 +34,8 @@ function AppRoutes(){
     <div className="min-h-screen bg-hero-bg safe-area-inset">
       <Header />
       <main className="p-4 pt-2 max-w-xl mx-auto">
-        <Routes>
+        <ErrorBoundary>
+          <Routes>
           <Route path="/" element={<Apartments/>} />
           <Route path="/login" element={<Login/>} />
           <Route path="/register" element={<Register/>} />
@@ -42,7 +44,8 @@ function AppRoutes(){
           <Route path="/notifications" element={<Notifications/>} />
           <Route path="/admin" element={<Admin/>} />
           <Route path="/profile" element={<Profile/>} />
-        </Routes>
+          </Routes>
+        </ErrorBoundary>
       </main>
       <div className="md:hidden">
         {/* bottom nav for mobile */}
