@@ -4,8 +4,6 @@ import { useAuth } from '../AuthContext'
 import Modal from '../components/Modal'
 
 function SkeletonCard(){
-  const list = Array.isArray(apartments) ? apartments : []
-
   return (
     <div className="bg-white p-4 rounded-xl shadow-md animate-pulse">
       <div className="h-6 bg-slate-200 rounded mb-3 w-3/4" />
@@ -63,6 +61,8 @@ export default function Apartments(){
     }
     fetchApplied()
   },[apartments, user])
+
+  const list = Array.isArray(apartments) ? apartments : []
 
   return (
     <div className="pb-28">
