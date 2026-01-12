@@ -15,7 +15,8 @@ export default function CreateApartment(){
     try{
       await createApartment({ title, description: desc, location, rooms, rent })
       alert('Posted')
-      navigate('/')
+      // force a full reload so the apartments list refreshes reliably after deploy
+      window.location.href = '/'
     }catch(err){
       alert('You must login to post')
     }

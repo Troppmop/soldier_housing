@@ -18,6 +18,10 @@ export function AuthProvider({ children }){
       }
       try{
         const u = await api.getCurrentUser()
+        // normalize is_admin which may be boolean, number or string from backend
+        if(u && typeof u.is_admin !== 'boolean'){
+          u.is_admin = !!(u.is_admin === true || u.is_admin === '1' || u.is_admin === 1 || u.is_admin === 'true')
+        }
         if(mounted) setUser(u)
       }catch(e){
         localStorage.removeItem('token')
@@ -33,6 +37,10 @@ export function AuthProvider({ children }){
   const login = async (email, password) => {
     await api.login(email, password)
     const u = await api.getCurrentUser()
+    // normalize is_admin to boolean for reliable checks in UI
+    if(u && typeof u.is_admin !== 'boolean'){
+      u.is_admin = !!(u.is_admin === true || u.is_admin === '1' || u.is_admin === 1 || u.is_admin === 'true')
+    }
     console.log('Auth login user:', u)
     setUser(u)
     return u
