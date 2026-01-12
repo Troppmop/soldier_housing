@@ -14,6 +14,7 @@ app = FastAPI(title="Soldier Housing API")
 # CORS setup - allow localhost dev frontend by default
 origins = os.getenv("CORS_ORIGINS", "http://localhost:5173")
 allow_origins = [o.strip() for o in origins.split(",")] if origins else ["*"]
+print('CORS allow_origins:', allow_origins)
 
 app.add_middleware(
     CORSMiddleware,
