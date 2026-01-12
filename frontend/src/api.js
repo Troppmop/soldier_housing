@@ -1,8 +1,17 @@
 import axios from 'axios'
 
-const API = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000',
-})
+// Ensure VITE_API_URL is an absolute URL (includes protocol). Some deploys mistakenly
+// set the env var without https:// which results in relative requests to the frontend
+// host (e.g. /soldierhousing-backend-production.up.railway.app/...), causing 304s
+// from the static server. Normalize here and log the resolved base URL to help
+// debug deployed builds.
+let base = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+if (base && !base.startsWith('http://') && !base.startsWith('https://')){
+  base = 'https://' + base
+}
+console.log('API base URL:', base)
+
+const API = axios.create({ baseURL: base })
 
 export async function login(email, password){
   const form = new URLSearchParams()
