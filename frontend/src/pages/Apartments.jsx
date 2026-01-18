@@ -91,17 +91,17 @@ export default function Apartments(){
   const emptyMessage = !apartments.length ? 'No apartments posted yet.' : (list.length === 0 ? 'No listings match your search or filters.' : null)
 
   return (
-    <div className="pb-28">
-      <div className="flex items-center justify-between mb-3">
+    <div className="pb-28 px-3 max-w-2xl mx-auto">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
         <h2 className="text-lg font-semibold">Listings</h2>
-        <div className="flex items-center space-x-2">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
           <input
             placeholder="Search title, location or description"
             value={query}
             onChange={e=>setQuery(e.target.value)}
-            className="border rounded px-3 py-1 text-sm"
+            className="border rounded px-3 py-2 text-sm w-full sm:w-72"
           />
-          <select value={sort} onChange={e=>setSort(e.target.value)} className="border rounded px-2 py-1 text-sm">
+          <select value={sort} onChange={e=>setSort(e.target.value)} className="border rounded px-2 py-2 text-sm w-full sm:w-auto">
             <option value="newest">Newest</option>
             <option value="rent-asc">Rent: Low → High</option>
             <option value="rent-desc">Rent: High → Low</option>
@@ -116,7 +116,7 @@ export default function Apartments(){
       </div>
 
       {loading ? (
-        <div className="grid gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <SkeletonCard />
           <SkeletonCard />
           <SkeletonCard />
@@ -147,7 +147,7 @@ export default function Apartments(){
                     ) : (user && (user.id === a.owner_id || user.id === a.ownerId) ? (
                       <div className="text-slate-500 text-sm">Your listing</div>
                     ) : (
-                      <button onClick={()=>{ setSelected(a); setMessage('') }} className="bg-emerald-700 text-white px-3 py-1 rounded">Apply</button>
+                      <button onClick={()=>{ setSelected(a); setMessage('') }} className="bg-emerald-700 text-white px-3 py-2 rounded">Apply</button>
                     ))}
                   </div>
                 </div>
@@ -160,9 +160,9 @@ export default function Apartments(){
       <Modal open={!!selected} title={selected ? `Apply to ${selected.title}` : ''} onClose={()=>{ setSelected(null); setMessage('') }}>
         <div>
           <textarea value={message} onChange={e=>setMessage(e.target.value)} placeholder="Message to owner (optional)" className="w-full border rounded p-2 h-24" />
-          <div className="flex justify-end gap-2 mt-3">
-            <button onClick={()=>{ setSelected(null); setMessage('') }} className="px-3 py-1 border rounded">Cancel</button>
-            <button onClick={submitApply} className="px-3 py-1 bg-emerald-700 text-white rounded">Send Application</button>
+          <div className="flex flex-col sm:flex-row justify-end gap-2 mt-3">
+            <button onClick={()=>{ setSelected(null); setMessage('') }} className="px-3 py-2 border rounded">Cancel</button>
+            <button onClick={submitApply} className="px-3 py-2 bg-emerald-700 text-white rounded">Send Application</button>
           </div>
         </div>
       </Modal>

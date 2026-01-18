@@ -19,15 +19,24 @@ services:
       SECRET_KEY: devsecret
       ADMIN_EMAIL: admin@example.com
       ADMIN_PASSWORD: changeme
+      CORS_ORIGINS: http://localhost:8080,http://localhost:5173,https://soldier-housing-frontend-production.up.railway.app
     ports:
       - "8000:8000"
 
   # frontend:
-  #   build: ./frontend
-  #   ports:
-  #     - "5173:5173"
-  #   environment:
-  #     VITE_API_URL: http://localhost:8000
+  frontend:
+    image: soldier-housing-frontend:local
+    # If you prefer compose to build the image, replace the above with:
+    # build:
+    #   context: ./
+    #   dockerfile: frontend/Dockerfile.prod
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+    environment:
+      # runtime env for entry script: frontend writes dist/config.json at startup
+      VITE_API_URL: http://localhost:8000
 
 volumes:
   db-data:

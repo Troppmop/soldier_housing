@@ -1,26 +1,53 @@
 import axios from 'axios'
 
-// Ensure VITE_API_URL is an absolute URL (includes protocol). Some deploys mistakenly
-// set the env var without https:// which results in relative requests to the frontend
-// host (e.g. /soldierhousing-backend-production.up.railway.app/...), causing 304s
-// from the static server. Normalize here and log the resolved base URL to help
-// debug deployed builds.
-let base = import.meta.env.VITE_API_URL || 'http://localhost:8000'
-if (base && !base.startsWith('http://') && !base.startsWith('https://')){
-  base = 'https://' + base
-}
-console.log('API base URL:', base)
+// Runtime-config fallback: attempt to load `/config.json` from the same origin
+// (this allows changing the backend URL without rebuilding the app). If that
+// file is missing, fall back to the build-time `import.meta.env.VITE_API_URL`.
+async function resolveBase(){
+  try{
+    const resp = await fetch('/config.json', { cache: 'no-cache' })
+    if (resp.ok){
+      const cfg = await resp.json()
+      if (cfg && cfg.VITE_API_URL){
+        let b = cfg.VITE_API_URL
+        if (b && !b.startsWith('http://') && !b.startsWith('https://')) b = 'https://' + b
+        console.log('API base URL (runtime):', b)
+        return b
+      }
+    }
+  }catch(e){
+    // ignore and fallback to build-time env
+  }
 
-const API = axios.create({ baseURL: base })
+  let base = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+  if (base && !base.startsWith('http://') && !base.startsWith('https://')){
+    base = 'https://' + base
+  }
+  console.log('API base URL (build):', base)
+  return base
+}
+
+// Create a placeholder axios instance; we'll update its baseURL after resolving
+// config. Callers may import `API` and `await initApi()` if they need the base
+// to be resolved before first request.
+const API = axios.create()
+let _apiInitPromise = null
+export function initApi(){
+  if (!_apiInitPromise) _apiInitPromise = (async ()=>{
+    const base = await resolveBase()
+    API.defaults.baseURL = base
+    return base
+  })()
+  return _apiInitPromise
+}
 
 export async function login(email, password){
   const form = new URLSearchParams()
   form.append('username', email)
   form.append('password', password)
   try{
-    const tokenUrl = new URL('/auth/token', base).toString()
-    console.log('POST token to', tokenUrl)
-    const resp = await axios.post(tokenUrl, form, { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } })
+    // Use configured axios instance; ensure initApi() was called by the caller
+    const resp = await API.post('/auth/token', form, { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } })
     console.log('Login resp status', resp.status)
     localStorage.setItem('token', resp.data.access_token)
     console.log('Stored token, length:', (resp.data.access_token||'').length)
@@ -96,7 +123,8 @@ export async function getCurrentUser(){
   }
   // If no data, retry with a cache-busting query param using axios directly
   try{
-    const url = new URL('/users/me', base).toString() + `?_=${Date.now()}`
+    const baseUrl = API.defaults.baseURL || (await resolveBase())
+    const url = new URL('/users/me', baseUrl).toString() + `?_=${Date.now()}`
     console.log('Fetching current user from', url)
     const r2 = await axios.get(url, authHeaders())
     if (r2 && r2.data) return r2.data

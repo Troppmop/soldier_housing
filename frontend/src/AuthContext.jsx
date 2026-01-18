@@ -11,6 +11,8 @@ export function AuthProvider({ children }){
   useEffect(()=>{
     let mounted = true
     async function check(){
+      // ensure API baseURL is initialized (from runtime config or build-time env)
+      try{ await api.initApi() }catch(e){ console.warn('initApi failed', e) }
       const token = localStorage.getItem('token')
       if(!token){
         if(mounted) setLoading(false)
@@ -35,6 +37,7 @@ export function AuthProvider({ children }){
   },[])
 
   const login = async (email, password) => {
+    try{ await api.initApi() }catch(e){ console.warn('initApi failed', e) }
     await api.login(email, password)
     const u = await api.getCurrentUser()
     // normalize is_admin to boolean for reliable checks in UI

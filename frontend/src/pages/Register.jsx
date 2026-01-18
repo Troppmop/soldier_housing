@@ -22,7 +22,7 @@ export default function Register(){
   }
 
   return (
-    <div className="max-w-md mx-auto bg-white p-6 rounded-xl shadow-lg mt-8">
+    <div className="max-w-md mx-auto bg-white p-6 rounded-xl shadow-lg mt-8 px-4">
       <h2 className="text-2xl font-semibold mb-2 text-center">Join the community</h2>
       <p className="text-sm text-slate-500 mb-4 text-center">Register to post available rooms or apply to join an apartment. Keep your service details private — communicate safely inside the app.</p>
       <form onSubmit={submit} className="space-y-4" aria-label="Register form">
@@ -46,8 +46,9 @@ export default function Register(){
           <input value={password} onChange={e=>setPassword(e.target.value)} placeholder="Choose a secure password" type="password" required className="w-full p-3 border rounded-lg" />
         </div>
 
-        <div className="flex justify-end">
-          <button className="bg-emerald-700 hover:bg-emerald-800 text-white px-4 py-2 rounded-lg">Create account</button>
+        <div className="flex flex-col gap-3">
+          <button className="bg-emerald-700 hover:bg-emerald-800 text-white px-4 py-3 rounded-lg font-medium">Create account</button>
+          <a href="/login" className="text-center text-sm text-emerald-700">Back to login</a>
         </div>
       </form>
     </div>

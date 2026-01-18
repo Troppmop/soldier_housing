@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react'
+import { initApi } from './api'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Routes, Route, Link, useNavigate } from 'react-router-dom'
 import './index.css'
@@ -66,4 +67,7 @@ function Root(){
   )
 }
 
-createRoot(document.getElementById('root')).render(<Root />)
+;(async function(){
+  try{ await initApi() }catch(e){ console.warn('initApi failed at startup', e) }
+  createRoot(document.getElementById('root')).render(<Root />)
+})()
