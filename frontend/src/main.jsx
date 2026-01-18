@@ -8,7 +8,6 @@ import Register from './pages/Register'
 import Apartments from './pages/Apartments'
 import CreateApartment from './pages/CreateApartment'
 import Applications from './pages/Applications'
-import Notifications from './pages/Notifications'
 import Admin from './pages/Admin'
 import Profile from './pages/Profile'
 import { AuthProvider, useAuth } from './AuthContext'
@@ -41,7 +40,6 @@ function AppRoutes(){
           <Route path="/register" element={<Register/>} />
           <Route path="/create" element={<CreateApartment/>} />
           <Route path="/applications" element={<Applications/>} />
-          <Route path="/notifications" element={<Notifications/>} />
           <Route path="/admin" element={<Admin/>} />
           <Route path="/profile" element={<Profile/>} />
           </Routes>

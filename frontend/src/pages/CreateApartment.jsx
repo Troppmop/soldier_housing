@@ -3,6 +3,7 @@ import { createApartment } from '../api'
 import { useNavigate } from 'react-router-dom'
 
 export default function CreateApartment(){
+  const [listingType, setListingType] = useState('offer')
   const [title, setTitle] = useState('')
   const [desc, setDesc] = useState('')
   const [location, setLocation] = useState('')
@@ -13,7 +14,7 @@ export default function CreateApartment(){
   async function submit(e){
     e.preventDefault()
     try{
-      await createApartment({ title, description: desc, location, rooms, rent })
+      await createApartment({ title, description: desc, location, rooms, rent, listing_type: listingType })
       alert('Posted')
       // force a full reload so the apartments list refreshes reliably after deploy
       window.location.href = '/'
@@ -24,7 +25,11 @@ export default function CreateApartment(){
 
   return (
     <div className="max-w-xl mx-auto bg-white p-6 rounded-xl shadow-lg mt-4">
-      <h2 className="text-xl font-semibold mb-4">Post Apartment</h2>
+      <h2 className="text-xl font-semibold mb-4">{listingType === 'offer' ? 'Post Apartment' : 'Post Looking-for Listing'}</h2>
+      <div className="flex gap-2 mb-4">
+        <button type="button" onClick={() => setListingType('offer')} className={`px-3 py-1 rounded-lg ${listingType==='offer' ? 'bg-emerald-700 text-white' : 'bg-slate-100'}`}>Posting an apartment</button>
+        <button type="button" onClick={() => setListingType('seeking')} className={`px-3 py-1 rounded-lg ${listingType==='seeking' ? 'bg-emerald-700 text-white' : 'bg-slate-100'}`}>Looking for apartment</button>
+      </div>
       <form onSubmit={submit} className="space-y-4" aria-label="Create apartment form">
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1">Title</label>
@@ -83,7 +88,7 @@ export default function CreateApartment(){
         </div>
 
         <div className="flex justify-end">
-          <button type="submit" className="bg-emerald-700 text-white px-4 py-2 rounded-lg">Post Apartment</button>
+          <button type="submit" className="bg-emerald-700 text-white px-4 py-2 rounded-lg">{listingType === 'offer' ? 'Post Apartment' : 'Post Listing'}</button>
         </div>
       </form>
     </div>

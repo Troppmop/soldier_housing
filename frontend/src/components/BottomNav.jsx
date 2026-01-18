@@ -5,6 +5,11 @@ import { useAuth } from '../AuthContext'
 export default function BottomNav(){
   const loc = useLocation()
   const { user } = useAuth()
+  // hide bottom nav on auth screens
+  if(loc && typeof loc.pathname === 'string'){
+    const p = loc.pathname.toLowerCase()
+    if(p.startsWith('/login') || p.startsWith('/register')) return null
+  }
   const active = (p)=> loc.pathname === p ? 'text-emerald-700' : 'text-slate-500'
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white border-t py-2 safe-area">
@@ -21,10 +26,7 @@ export default function BottomNav(){
           <span className="text-xl">📬</span>
           <span className="text-xs">Apps</span>
         </Link>
-        <Link to="/notifications" className={`flex flex-col items-center ${active('/notifications')}`}>
-          <span className="text-xl">🔔</span>
-          <span className="text-xs">Notes</span>
-        </Link>
+        
         {user && user.is_admin && (
           <Link to="/admin" className={`flex flex-col items-center ${active('/admin')}`}>
             <span className="text-xl">⚙️</span>
