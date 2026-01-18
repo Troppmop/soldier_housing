@@ -39,6 +39,10 @@ def on_startup():
             conn.execute(text("ALTER TABLE applications ADD COLUMN IF NOT EXISTS status VARCHAR DEFAULT 'pending'"))
         except Exception:
             pass
+        try:
+            conn.execute(text("ALTER TABLE apartments ADD COLUMN IF NOT EXISTS listing_type VARCHAR DEFAULT 'offer'"))
+        except Exception:
+            pass
     db: Session = SessionLocal()
     try:
         admin = crud.get_user_by_email(db, config.ADMIN_EMAIL)
@@ -108,6 +112,7 @@ def create_apartment(apartment: schemas.ApartmentCreate, db: Session = Depends(g
         'location': ap.location,
         'rooms': ap.rooms,
         'rent': ap.rent,
+        'listing_type': ap.listing_type if hasattr(ap, 'listing_type') else 'offer',
         'owner_id': ap.owner_id,
         'owner_name': owner.full_name if owner else None,
     }
@@ -126,6 +131,7 @@ def list_apartments(db: Session = Depends(get_db)):
             'location': a.location,
             'rooms': a.rooms,
             'rent': a.rent,
+            'listing_type': a.listing_type if hasattr(a, 'listing_type') else 'offer',
             'owner_id': a.owner_id,
             'owner_name': owner.full_name if owner else None,
         })
@@ -145,6 +151,7 @@ def get_apartment(apartment_id: int, db: Session = Depends(get_db)):
         'location': ap.location,
         'rooms': ap.rooms,
         'rent': ap.rent,
+        'listing_type': ap.listing_type if hasattr(ap, 'listing_type') else 'offer',
         'owner_id': ap.owner_id,
         'owner_name': owner.full_name if owner else None,
     }

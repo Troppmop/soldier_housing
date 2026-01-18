@@ -21,6 +21,7 @@ class Apartment(Base):
     location = Column(String, index=True)
     rooms = Column(Integer, default=1)
     rent = Column(Integer)
+    listing_type = Column(String, default='offer', index=True)
     owner_id = Column(Integer, ForeignKey("users.id"))
     owner = relationship("User", back_populates="apartments")
     applications = relationship("Application", back_populates="apartment")

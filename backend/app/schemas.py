@@ -39,6 +39,7 @@ class ApartmentBase(BaseModel):
     location: Optional[str] = None
     rooms: Optional[int] = 1
     rent: Optional[int] = 0
+    listing_type: Optional[str] = 'offer'
 
 class ApartmentCreate(ApartmentBase):
     pass
