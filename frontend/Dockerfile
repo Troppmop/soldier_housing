@@ -1,22 +1,14 @@
 FROM node:20-bullseye-slim AS builder
 WORKDIR /app
-# Copy entire context so build works whether the context is repo-root or ./frontend
-COPY . .
+# Copy only frontend package files first for a clean install
+COPY frontend/package.json frontend/package-lock.json* ./
+# Install dependencies without optional native binaries to avoid rollup native module issues
+RUN npm ci --no-audit --no-fund --no-optional || npm install --no-optional
+# Copy frontend source and build
+COPY frontend/. ./
 ARG VITE_API_URL
 ENV VITE_API_URL=$VITE_API_URL
-
-# Install and build from the correct folder depending on context
-RUN set -eux; \
-	# Ensure optional dependencies are omitted to avoid native rollup binaries
-	export NPM_CONFIG_OPTIONAL=false; \
-	if [ -f frontend/package.json ]; then \
-		cd frontend; \
-		npm ci --omit=optional --no-audit --no-fund || npm install --omit=optional --no-audit --no-fund; \
-		npm run build; \
-	else \
-		npm ci --omit=optional --no-audit --no-fund || npm install --omit=optional --no-audit --no-fund; \
-		npm run build; \
-	fi
+RUN npm run build
 
 FROM nginx:stable-alpine
 # Copy built assets (try both possible locations)
