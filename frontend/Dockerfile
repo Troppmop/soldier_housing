@@ -35,6 +35,8 @@ RUN set -eux; \
 		fi
 
 FROM nginx:stable-alpine AS runner
+# Default PORT environment variable so template substitution yields a valid listen directive
+ENV PORT=80
 # Use a simple nginx config template with SPA fallback to index.html
 # Copy as a template so docker-entrypoint can substitute $PORT at container start
 COPY frontend/nginx.conf /etc/nginx/templates/default.conf.template
