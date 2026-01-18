@@ -25,6 +25,13 @@ RUN set -eux; \
 				npm ci --no-audit --no-fund --no-optional || npm install --no-optional --no-audit --no-fund; \
 				npm run build; \
 			fi; \
+		fi; \
+		# Ensure a canonical /app/dist exists for the runner stage regardless of where build wrote files
+		mkdir -p /app/dist; \
+		if [ -d frontend/dist ]; then \
+			cp -r frontend/dist/. /app/dist/; \
+		elif [ -d dist ]; then \
+			cp -r dist/. /app/dist/; \
 		fi
 
 FROM nginx:stable-alpine AS runner
