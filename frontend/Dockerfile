@@ -5,16 +5,26 @@ COPY . .
 ARG VITE_API_URL
 ENV VITE_API_URL=$VITE_API_URL
 
-# Use Yarn for a more predictable install of JS deps (avoids some npm optional-deps issues)
+# Use yarn if available; otherwise fall back to npm. Avoid installing global yarn
 RUN set -eux; \
-		npm install -g yarn@1.22.19; \
-		if [ -f frontend/package.json ]; then \
-			cd frontend; \
-			yarn install --network-concurrency 1; \
-			yarn build; \
+		if command -v yarn >/dev/null 2>&1; then \
+			if [ -f frontend/package.json ]; then \
+				cd frontend; \
+				yarn install --network-concurrency 1; \
+				yarn build; \
+			else \
+				yarn install --network-concurrency 1; \
+				yarn build; \
+			fi; \
 		else \
-			yarn install --network-concurrency 1; \
-			yarn build; \
+			if [ -f frontend/package.json ]; then \
+				cd frontend; \
+				npm ci --no-audit --no-fund --no-optional || npm install --no-optional --no-audit --no-fund; \
+				npm run build; \
+			else \
+				npm ci --no-audit --no-fund --no-optional || npm install --no-optional --no-audit --no-fund; \
+				npm run build; \
+			fi; \
 		fi
 
 FROM nginx:stable-alpine AS runner
