@@ -7,12 +7,14 @@ ENV VITE_API_URL=$VITE_API_URL
 
 # Install and build from the correct folder depending on context
 RUN set -eux; \
+	# Ensure optional dependencies are omitted to avoid native rollup binaries
+	export NPM_CONFIG_OPTIONAL=false; \
 	if [ -f frontend/package.json ]; then \
 		cd frontend; \
-		npm ci --no-audit --no-fund --no-optional || npm install --no-optional; \
+		npm ci --omit=optional --no-audit --no-fund || npm install --omit=optional --no-audit --no-fund; \
 		npm run build; \
 	else \
-		npm ci --no-audit --no-fund --no-optional || npm install --no-optional; \
+		npm ci --omit=optional --no-audit --no-fund || npm install --omit=optional --no-audit --no-fund; \
 		npm run build; \
 	fi
 
