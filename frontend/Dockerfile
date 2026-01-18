@@ -35,8 +35,9 @@ RUN set -eux; \
 		fi
 
 FROM nginx:stable-alpine AS runner
-# Use a simple nginx config with SPA fallback to index.html
-COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
+# Use a simple nginx config template with SPA fallback to index.html
+# Copy as a template so docker-entrypoint can substitute $PORT at container start
+COPY frontend/nginx.conf /etc/nginx/templates/default.conf.template
 # Copy built assets from builder (support both possible build locations)
 COPY --from=builder /app/frontend/dist /usr/share/nginx/html
 COPY --from=builder /app/dist /usr/share/nginx/html
