@@ -10,6 +10,9 @@ RUN if [ -f yarn.lock ]; then yarn install --network-concurrency 1 --frozen-lock
 COPY frontend/. ./
 ARG VITE_API_URL
 ENV VITE_API_URL=$VITE_API_URL
+ENV NPM_CONFIG_OPTIONAL=false
+# remove any optional native rollup binaries that may have been installed accidentally
+RUN rm -rf ./node_modules/@rollup/rollup-* || true
 RUN npm run build
 ENV HOST 0.0.0.0
 CMD ["npx", "serve", "-s", "dist", "-l", "5173"]
