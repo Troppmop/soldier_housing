@@ -4,13 +4,29 @@ Quick scaffold for a mobile-friendly fullstack apartment registry (React + Vite 
 
 ## Local testing (Docker)
 
-Start services with docker-compose:
+### Option A: Run using published Docker Hub images
 
 ```bash
-docker-compose up --build
+docker compose pull
+docker compose up
 ```
 
-- Frontend: http://localhost:5173
+### Option B: Build locally (tag as `v1`) and run
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.build.yml build
+docker compose -f docker-compose.yml -f docker-compose.build.yml up
+```
+
+To publish those `v1` images to Docker Hub:
+
+```bash
+docker login
+docker push dovidtroppe/soldier-housing-backend:v1
+docker push dovidtroppe/soldier-housing-frontend:v1
+```
+
+- Frontend: http://localhost:8080
 - Backend API: http://localhost:8000 (OpenAPI at `/docs`)
 - Postgres: localhost:5432
 
@@ -36,6 +52,7 @@ Troubleshooting:
 - CORS error (No Access-Control-Allow-Origin): ensure backend `CORS_ORIGINS` includes your exact frontend origin (no trailing slash).
 - Frontend calling localhost in prod: verify `https://<frontend>/config.json` contains the correct backend URL.
 - 502/Bad Gateway: not applicable; nginx is not used. Frontend is served by a Node static server.
+- `docker compose pull` says "not found": the image repo/tag doesn’t exist on Docker Hub (check `BACKEND_IMAGE`/`FRONTEND_IMAGE` in `.env`). If the repo is private, run `docker login` first.
 
 Security note: change the default admin password before exposing to production. Set a strong `SECRET_KEY`.
 

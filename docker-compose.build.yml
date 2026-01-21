@@ -1,0 +1,18 @@
+# Build override for local image builds (e.g. tagging/pushing to Docker Hub)
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.build.yml build
+#   docker compose -f docker-compose.yml -f docker-compose.build.yml up
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: ${BACKEND_IMAGE:-dovidtroppe/soldier-housing-backend:v1}
+    pull_policy: never
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile.prod
+    image: ${FRONTEND_IMAGE:-dovidtroppe/soldier-housing-frontend:v1}
+    pull_policy: never
