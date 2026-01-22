@@ -244,6 +244,21 @@ def get_apartment(apartment_id: int, db: Session = Depends(get_db)):
     }
 
 
+@app.delete("/apartments/{apartment_id}")
+def delete_apartment(apartment_id: int, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
+    ap = db.query(models.Apartment).filter(models.Apartment.id == apartment_id).first()
+    if not ap:
+        raise HTTPException(status_code=404, detail="Apartment not found")
+    # Only owner (or admin) can delete
+    if (ap.owner_id != current_user.id) and (not getattr(current_user, 'is_admin', False)):
+        raise HTTPException(status_code=403, detail="Not authorized")
+    # Remove related applications first to avoid FK constraint issues
+    db.query(models.Application).filter(models.Application.apartment_id == apartment_id).delete(synchronize_session=False)
+    db.delete(ap)
+    db.commit()
+    return {"ok": True}
+
+
 @app.post("/apartments/{apartment_id}/apply", response_model=schemas.ApplicationOut)
 def apply_apartment(apartment_id: int, application: schemas.ApplicationCreate, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
     ap = crud.get_apartment(db, apartment_id)

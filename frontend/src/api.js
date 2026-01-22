@@ -120,6 +120,11 @@ export async function applyApartment(id, message){
   return API.post(`/apartments/${id}/apply`, { message }, authHeaders())
 }
 
+
+export async function deleteApartment(id){
+  return API.delete(`/apartments/${id}`, authHeaders())
+}
+
 export async function getApartmentApplied(id){
   return API.get(`/apartments/${id}/applied`, authHeaders())
 }

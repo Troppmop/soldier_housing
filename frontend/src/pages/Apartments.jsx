@@ -1,5 +1,5 @@
 import React, {useEffect, useState, useMemo} from 'react'
-import { listApartments, applyApartment, getApartmentsApplied } from '../api'
+import { listApartments, applyApartment, getApartmentsApplied, deleteApartment } from '../api'
 import { useAuth } from '../AuthContext'
 import Modal from '../components/Modal'
 
@@ -54,6 +54,31 @@ export default function Apartments(){
       setAppliedMap(prev=>({ ...prev, [selected.id]: true }))
     }catch(e){
       alert('You must login to apply')
+    }
+  }
+
+  async function onDelete(apartment){
+    if(!apartment) return
+    if(!user) {
+      alert('You must be logged in')
+      return
+    }
+    if(!(user.id === apartment.owner_id || user.id === apartment.ownerId || user.is_admin)){
+      alert('Not authorized')
+      return
+    }
+    if(!confirm('Delete this listing? This cannot be undone.')) return
+    try{
+      await deleteApartment(apartment.id)
+      setApartments(prev => (Array.isArray(prev) ? prev.filter(a => a.id !== apartment.id) : []))
+      setAppliedMap(prev => {
+        const next = { ...(prev || {}) }
+        delete next[apartment.id]
+        return next
+      })
+    }catch(e){
+      console.error(e)
+      alert('Delete failed')
     }
   }
   
@@ -145,7 +170,10 @@ export default function Apartments(){
                     {appliedMap[a.id] ? (
                       <div className="text-emerald-700 text-sm">Applied</div>
                     ) : (user && (user.id === a.owner_id || user.id === a.ownerId) ? (
-                      <div className="text-slate-500 text-sm">Your listing</div>
+                      <div className="flex items-center gap-2">
+                        <div className="text-slate-500 text-sm">Your listing</div>
+                        <button onClick={()=>onDelete(a)} className="text-red-600 text-sm hover:underline">Delete</button>
+                      </div>
                     ) : (
                       <button onClick={()=>{ setSelected(a); setMessage('') }} className="bg-emerald-700 text-white px-3 py-2 rounded">Apply</button>
                     ))}
