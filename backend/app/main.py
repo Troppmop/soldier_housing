@@ -49,6 +49,26 @@ def on_startup():
         except Exception:
             pass
         try:
+            conn.execute(text("ALTER TABLE apartments ADD COLUMN IF NOT EXISTS gender VARCHAR"))
+        except Exception:
+            pass
+        try:
+            conn.execute(text("ALTER TABLE apartments ADD COLUMN IF NOT EXISTS shomer_shabbos BOOLEAN DEFAULT FALSE"))
+        except Exception:
+            pass
+        try:
+            conn.execute(text("ALTER TABLE apartments ADD COLUMN IF NOT EXISTS shomer_kashrut BOOLEAN DEFAULT FALSE"))
+        except Exception:
+            pass
+        try:
+            conn.execute(text("ALTER TABLE apartments ADD COLUMN IF NOT EXISTS opposite_gender_allowed BOOLEAN DEFAULT FALSE"))
+        except Exception:
+            pass
+        try:
+            conn.execute(text("ALTER TABLE apartments ADD COLUMN IF NOT EXISTS smoking_allowed BOOLEAN DEFAULT FALSE"))
+        except Exception:
+            pass
+        try:
             conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_code_hash VARCHAR"))
         except Exception:
             pass
@@ -200,6 +220,11 @@ def create_apartment(apartment: schemas.ApartmentCreate, db: Session = Depends(g
         'rooms': ap.rooms,
         'rent': ap.rent,
         'listing_type': ap.listing_type if hasattr(ap, 'listing_type') else 'offer',
+        'gender': getattr(ap, 'gender', None),
+        'shomer_shabbos': bool(getattr(ap, 'shomer_shabbos', False)),
+        'shomer_kashrut': bool(getattr(ap, 'shomer_kashrut', False)),
+        'opposite_gender_allowed': bool(getattr(ap, 'opposite_gender_allowed', False)),
+        'smoking_allowed': bool(getattr(ap, 'smoking_allowed', False)),
         'owner_id': ap.owner_id,
         'owner_name': owner.full_name if owner else None,
     }
@@ -219,6 +244,11 @@ def list_apartments(db: Session = Depends(get_db)):
             'rooms': a.rooms,
             'rent': a.rent,
             'listing_type': a.listing_type if hasattr(a, 'listing_type') else 'offer',
+            'gender': getattr(a, 'gender', None),
+            'shomer_shabbos': bool(getattr(a, 'shomer_shabbos', False)),
+            'shomer_kashrut': bool(getattr(a, 'shomer_kashrut', False)),
+            'opposite_gender_allowed': bool(getattr(a, 'opposite_gender_allowed', False)),
+            'smoking_allowed': bool(getattr(a, 'smoking_allowed', False)),
             'owner_id': a.owner_id,
             'owner_name': owner.full_name if owner else None,
         })
@@ -239,6 +269,11 @@ def get_apartment(apartment_id: int, db: Session = Depends(get_db)):
         'rooms': ap.rooms,
         'rent': ap.rent,
         'listing_type': ap.listing_type if hasattr(ap, 'listing_type') else 'offer',
+        'gender': getattr(ap, 'gender', None),
+        'shomer_shabbos': bool(getattr(ap, 'shomer_shabbos', False)),
+        'shomer_kashrut': bool(getattr(ap, 'shomer_kashrut', False)),
+        'opposite_gender_allowed': bool(getattr(ap, 'opposite_gender_allowed', False)),
+        'smoking_allowed': bool(getattr(ap, 'smoking_allowed', False)),
         'owner_id': ap.owner_id,
         'owner_name': owner.full_name if owner else None,
     }

@@ -9,12 +9,33 @@ export default function CreateApartment(){
   const [location, setLocation] = useState('')
   const [rooms, setRooms] = useState(1)
   const [rent, setRent] = useState(0)
+  const [gender, setGender] = useState('')
+  const [shomerShabbos, setShomerShabbos] = useState(false)
+  const [shomerKashrut, setShomerKashrut] = useState(false)
+  const [oppositeGenderAllowed, setOppositeGenderAllowed] = useState(false)
+  const [smokingAllowed, setSmokingAllowed] = useState(false)
   const navigate = useNavigate()
 
   async function submit(e){
     e.preventDefault()
+    if(!gender){
+      alert('Please select a gender')
+      return
+    }
     try{
-      await createApartment({ title, description: desc, location, rooms, rent, listing_type: listingType })
+      await createApartment({
+        title,
+        description: desc,
+        location,
+        rooms,
+        rent,
+        listing_type: listingType,
+        gender,
+        shomer_shabbos: !!shomerShabbos,
+        shomer_kashrut: !!shomerKashrut,
+        opposite_gender_allowed: !!oppositeGenderAllowed,
+        smoking_allowed: !!smokingAllowed,
+      })
       alert('Posted')
       // force a full reload so the apartments list refreshes reliably after deploy
       window.location.href = '/'
@@ -74,6 +95,36 @@ export default function CreateApartment(){
               className="w-full p-3 border rounded-lg"
               aria-label="Monthly rent"
             />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Gender</label>
+            <select value={gender} onChange={e=>setGender(e.target.value)} className="w-full p-3 border rounded-lg" required>
+              <option value="">Select…</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+            </select>
+          </div>
+          <div className="flex items-center gap-2 pt-7">
+            <input id="oppositeGenderAllowed" type="checkbox" checked={oppositeGenderAllowed} onChange={e=>setOppositeGenderAllowed(e.target.checked)} />
+            <label htmlFor="oppositeGenderAllowed" className="text-sm text-slate-700">Opposite gender allowed</label>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="flex items-center gap-2">
+            <input id="shomerShabbos" type="checkbox" checked={shomerShabbos} onChange={e=>setShomerShabbos(e.target.checked)} />
+            <label htmlFor="shomerShabbos" className="text-sm text-slate-700">Shomer Shabbos</label>
+          </div>
+          <div className="flex items-center gap-2">
+            <input id="shomerKashrut" type="checkbox" checked={shomerKashrut} onChange={e=>setShomerKashrut(e.target.checked)} />
+            <label htmlFor="shomerKashrut" className="text-sm text-slate-700">Shomer Kashrut</label>
+          </div>
+          <div className="flex items-center gap-2">
+            <input id="smokingAllowed" type="checkbox" checked={smokingAllowed} onChange={e=>setSmokingAllowed(e.target.checked)} />
+            <label htmlFor="smokingAllowed" className="text-sm text-slate-700">Smoking allowed</label>
           </div>
         </div>
 

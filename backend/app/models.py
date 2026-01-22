@@ -27,6 +27,14 @@ class Apartment(Base):
     rooms = Column(Integer, default=1)
     rent = Column(Integer)
     listing_type = Column(String, default='offer', index=True)
+
+    # Listing attributes / filters
+    gender = Column(String, nullable=True)  # 'male' | 'female'
+    shomer_shabbos = Column(Boolean, default=False)
+    shomer_kashrut = Column(Boolean, default=False)
+    opposite_gender_allowed = Column(Boolean, default=False)
+    smoking_allowed = Column(Boolean, default=False)
+
     owner_id = Column(Integer, ForeignKey("users.id"))
     owner = relationship("User", back_populates="apartments")
     applications = relationship("Application", back_populates="apartment")

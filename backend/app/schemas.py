@@ -59,6 +59,13 @@ class ApartmentBase(BaseModel):
     rent: Optional[int] = 0
     listing_type: Optional[str] = 'offer'
 
+    # Listing attributes / filters
+    gender: Optional[str] = None  # 'male' | 'female'
+    shomer_shabbos: Optional[bool] = False
+    shomer_kashrut: Optional[bool] = False
+    opposite_gender_allowed: Optional[bool] = False
+    smoking_allowed: Optional[bool] = False
+
 class ApartmentCreate(ApartmentBase):
     pass
 
