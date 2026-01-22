@@ -58,6 +58,21 @@ export async function login(email, password){
   }
 }
 
+
+export async function requestPasswordReset(email){
+  return API.post('/auth/forgot-password', { email })
+}
+
+
+export async function verifyResetCode(email, code){
+  return API.post('/auth/verify-reset-code', { email, code })
+}
+
+
+export async function resetPassword(reset_token, new_password){
+  return API.post('/auth/reset-password', { reset_token, new_password })
+}
+
 export function authHeaders(){
   const token = localStorage.getItem('token')
   return { headers: { Authorization: `Bearer ${token}` } }

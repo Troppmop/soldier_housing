@@ -1,4 +1,8 @@
 import os
+import time
+import hmac
+import hashlib
+import secrets
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,6 +12,7 @@ from .database import engine, get_db, SessionLocal
 from sqlalchemy import text
 from .auth import create_access_token, get_current_user
 from . import config
+from .emailer import send_password_reset_code
 
 app = FastAPI(title="Soldier Housing API")
 
@@ -43,6 +48,14 @@ def on_startup():
             conn.execute(text("ALTER TABLE apartments ADD COLUMN IF NOT EXISTS listing_type VARCHAR DEFAULT 'offer'"))
         except Exception:
             pass
+        try:
+            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_code_hash VARCHAR"))
+        except Exception:
+            pass
+        try:
+            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_code_expires_at BIGINT"))
+        except Exception:
+            pass
     db: Session = SessionLocal()
     try:
         admin = crud.get_user_by_email(db, config.ADMIN_EMAIL)
@@ -74,6 +87,80 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db:
         raise HTTPException(status_code=400, detail="Incorrect username or password")
     access_token = create_access_token(data={"sub": user.email})
     return {"access_token": access_token, "token_type": "bearer"}
+
+
+def _reset_code_hash(code: str) -> str:
+    key = (config.SECRET_KEY or "devsecret").encode("utf-8")
+    msg = (code or "").encode("utf-8")
+    return hmac.new(key, msg, hashlib.sha256).hexdigest()
+
+
+@app.post("/auth/forgot-password")
+def forgot_password(body: schemas.ForgotPasswordRequest, db: Session = Depends(get_db)):
+    # Always return ok to avoid user enumeration
+    user = crud.get_user_by_email(db, body.email)
+    if user:
+        code = str(secrets.randbelow(1_000_000)).zfill(6)
+        user.reset_code_hash = _reset_code_hash(code)
+        user.reset_code_expires_at = int(time.time()) + (10 * 60)
+        db.add(user)
+        db.commit()
+
+        # Best-effort email (prints to logs if SMTP not configured)
+        send_password_reset_code(body.email, code)
+    return {"ok": True}
+
+
+@app.post("/auth/verify-reset-code", response_model=schemas.VerifyResetCodeResponse)
+def verify_reset_code(body: schemas.VerifyResetCodeRequest, db: Session = Depends(get_db)):
+    user = crud.get_user_by_email(db, body.email)
+    now = int(time.time())
+    if (not user) or (not user.reset_code_hash) or (not user.reset_code_expires_at) or (now > int(user.reset_code_expires_at)):
+        raise HTTPException(status_code=400, detail="Invalid or expired code")
+
+    code = (body.code or "").strip()
+    if len(code) != 6 or not code.isdigit():
+        raise HTTPException(status_code=400, detail="Invalid or expired code")
+
+    if not hmac.compare_digest(user.reset_code_hash, _reset_code_hash(code)):
+        raise HTTPException(status_code=400, detail="Invalid or expired code")
+
+    # One-time use: clear code once verified, then issue short-lived reset token
+    user.reset_code_hash = None
+    user.reset_code_expires_at = None
+    db.add(user)
+    db.commit()
+
+    reset_token = create_access_token(
+        data={"sub": user.email, "purpose": "password_reset"},
+        expires_delta=__import__("datetime").timedelta(minutes=10),
+    )
+    return {"reset_token": reset_token}
+
+
+@app.post("/auth/reset-password")
+def reset_password_confirm(body: schemas.ResetPasswordConfirmRequest, db: Session = Depends(get_db)):
+    # Validate reset token
+    from jose import JWTError, jwt
+    try:
+        payload = jwt.decode(body.reset_token, config.SECRET_KEY, algorithms=[config.ALGORITHM])
+        email = payload.get("sub")
+        purpose = payload.get("purpose")
+        if not email or purpose != "password_reset":
+            raise HTTPException(status_code=400, detail="Invalid reset token")
+    except JWTError:
+        raise HTTPException(status_code=400, detail="Invalid reset token")
+
+    new_password = body.new_password or ""
+    if len(new_password) < 6:
+        raise HTTPException(status_code=400, detail="Password too short")
+
+    user = crud.get_user_by_email(db, email)
+    if not user:
+        raise HTTPException(status_code=400, detail="Invalid reset token")
+
+    crud.set_user_password(db, user, new_password)
+    return {"ok": True}
 
 
 @app.get("/users/me", response_model=schemas.UserOut)

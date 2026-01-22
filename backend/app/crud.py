@@ -150,3 +150,12 @@ def change_user_password(db: Session, user_obj: models.User, current_password: s
     db.commit()
     db.refresh(user_obj)
     return user_obj
+
+
+def set_user_password(db: Session, user_obj: models.User, new_password: str):
+    hashed = pwd_context.hash(new_password)
+    user_obj.hashed_password = hashed
+    db.add(user_obj)
+    db.commit()
+    db.refresh(user_obj)
+    return user_obj

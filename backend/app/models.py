@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, Boolean, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, Boolean, ForeignKey, BigInteger
 from sqlalchemy.orm import relationship
 from .database import Base
 
@@ -10,6 +10,11 @@ class User(Base):
     phone = Column(String, nullable=True)
     hashed_password = Column(String, nullable=False)
     is_admin = Column(Boolean, default=False)
+
+    # Password reset (6-digit code) support
+    reset_code_hash = Column(String, nullable=True)
+    reset_code_expires_at = Column(BigInteger, nullable=True)  # unix epoch seconds
+
     apartments = relationship("Apartment", back_populates="owner")
     applications = relationship("Application", back_populates="applicant")
 

@@ -24,6 +24,24 @@ class PasswordChange(BaseModel):
     current_password: str
     new_password: str
 
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class VerifyResetCodeRequest(BaseModel):
+    email: EmailStr
+    code: str
+
+
+class VerifyResetCodeResponse(BaseModel):
+    reset_token: str
+
+
+class ResetPasswordConfirmRequest(BaseModel):
+    reset_token: str
+    new_password: str
+
 class UserOut(BaseModel):
     id: int
     email: EmailStr
