@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from . import models, schemas
 from passlib.context import CryptContext
+from datetime import datetime
 
 # Support both Argon2 and bcrypt so existing bcrypt-hashed passwords still verify.
 # Prefer Argon2 for new hashes but accept bcrypt for legacy users during migration.
@@ -62,7 +63,11 @@ def apply_to_apartment(db: Session, applicant_id: int, apartment_id: int, messag
     # create notification for apartment owner
     apartment = get_apartment(db, apartment_id)
     if apartment and apartment.owner_id:
-        note = models.Notification(user_id=apartment.owner_id, message=f"New application for '{apartment.title}' from user#{applicant_id}")
+        note = models.Notification(
+            user_id=apartment.owner_id,
+            message=f"New application for '{apartment.title}' from user#{applicant_id}",
+            created_at=datetime.utcnow().isoformat(),
+        )
         db.add(note)
         db.commit()
     return app
@@ -101,7 +106,11 @@ def accept_application(db: Session, application_id: int, owner_id: int):
     db.commit()
     db.refresh(a)
     # notify applicant
-    note = models.Notification(user_id=a.applicant_id, message=f"Your application to '{ap.title}' was accepted")
+    note = models.Notification(
+        user_id=a.applicant_id,
+        message=f"Your application to '{ap.title}' was accepted",
+        created_at=datetime.utcnow().isoformat(),
+    )
     db.add(note)
     db.commit()
     return a

@@ -50,6 +50,11 @@ class AdminSendEmailRequest(BaseModel):
     message: str
     include_admins: Optional[bool] = False
 
+
+class PublicStatsOut(BaseModel):
+    users_count: int
+    posts_count: int
+
 class UserOut(BaseModel):
     id: int
     email: EmailStr

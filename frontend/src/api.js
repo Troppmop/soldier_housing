@@ -73,6 +73,10 @@ export async function resetPassword(reset_token, new_password){
   return API.post('/auth/reset-password', { reset_token, new_password })
 }
 
+export async function getPublicStats(){
+  return API.get('/stats')
+}
+
 export function authHeaders(){
   const token = localStorage.getItem('token')
   return { headers: { Authorization: `Bearer ${token}` } }

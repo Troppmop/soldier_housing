@@ -109,6 +109,13 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db:
     return {"access_token": access_token, "token_type": "bearer"}
 
 
+@app.get("/stats", response_model=schemas.PublicStatsOut)
+def public_stats(db: Session = Depends(get_db)):
+    users_count = db.query(models.User).count()
+    posts_count = db.query(models.Apartment).count()
+    return {"users_count": int(users_count), "posts_count": int(posts_count)}
+
+
 def _reset_code_hash(code: str) -> str:
     key = (config.SECRET_KEY or "devsecret").encode("utf-8")
     msg = (code or "").encode("utf-8")

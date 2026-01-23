@@ -1,7 +1,7 @@
-import React, {useState} from 'react'
+import React, {useEffect, useState} from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
-import { initApi, requestPasswordReset, verifyResetCode, resetPassword } from '../api'
+import { initApi, requestPasswordReset, verifyResetCode, resetPassword, getPublicStats } from '../api'
 
 export default function Login(){
   const [email, setEmail] = useState('')
@@ -13,8 +13,27 @@ export default function Login(){
   const [newPassword, setNewPassword] = useState('')
   const [newPassword2, setNewPassword2] = useState('')
   const [busy, setBusy] = useState(false)
+  const [stats, setStats] = useState(null)
+  const [statsLoading, setStatsLoading] = useState(true)
   const navigate = useNavigate()
   const { login } = useAuth()
+
+  useEffect(()=>{
+    let mounted = true
+    ;(async ()=>{
+      try{
+        await initApi()
+        const resp = await getPublicStats()
+        if(mounted) setStats(resp.data)
+      }catch(e){
+        // optional; ignore if backend doesn't support yet / network issues
+        if(mounted) setStats(null)
+      }finally{
+        if(mounted) setStatsLoading(false)
+      }
+    })()
+    return ()=>{ mounted = false }
+  },[])
 
   async function submit(e){
     e.preventDefault()
@@ -102,6 +121,19 @@ export default function Login(){
         <>
           <h2 className="text-2xl font-semibold mb-2 text-center">Welcome, Lone Soldier</h2>
           <p className="text-sm text-slate-500 mb-4 text-center">Find apartments, post rooms, and apply to join households — quick and secure.</p>
+
+          <div className="mb-4 rounded-lg border bg-slate-50 px-4 py-3 text-center">
+            <div className="text-xs text-slate-500">Community stats</div>
+            {statsLoading ? (
+              <div className="text-sm text-slate-700 mt-1">Loading…</div>
+            ) : (
+              <div className="text-sm text-slate-700 mt-1">
+                <span className="font-semibold">{stats && typeof stats.users_count === 'number' ? stats.users_count : '—'}</span> users ·{' '}
+                <span className="font-semibold">{stats && typeof stats.posts_count === 'number' ? stats.posts_count : '—'}</span> posts
+              </div>
+            )}
+          </div>
+
           <form onSubmit={submit} className="space-y-4" aria-label="Login form">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
