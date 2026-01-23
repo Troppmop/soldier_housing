@@ -191,3 +191,7 @@ export async function deleteAdminApplication(id){
 export async function adminCleanDB(){
   return API.post('/admin/clean', {}, authHeaders())
 }
+
+export async function adminSendEmail(payload){
+  return API.post('/admin/email', payload, authHeaders())
+}

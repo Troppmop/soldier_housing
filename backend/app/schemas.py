@@ -42,6 +42,14 @@ class ResetPasswordConfirmRequest(BaseModel):
     reset_token: str
     new_password: str
 
+
+class AdminSendEmailRequest(BaseModel):
+    target: str  # 'all' | 'user'
+    user_id: Optional[int] = None
+    subject: str
+    message: str
+    include_admins: Optional[bool] = False
+
 class UserOut(BaseModel):
     id: int
     email: EmailStr

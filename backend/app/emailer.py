@@ -1,65 +1,71 @@
 import os
-import smtplib
-from email.message import EmailMessage
+import resend
 
 
-def _env_bool(name: str, default: bool = False) -> bool:
-    v = os.getenv(name)
-    if v is None:
-        return default
-    return str(v).strip().lower() in {"1", "true", "yes", "y", "on"}
+def _send_via_resend(to_email: str, subject: str, text: str, html: str | None = None) -> bool:
+    api_key = os.getenv("RESEND_API_KEY")
+    from_email = os.getenv("RESEND_FROM")
+    reply_to = os.getenv("RESEND_REPLY_TO")
+
+    if not api_key:
+        print("[email] RESEND_API_KEY is not set")
+        return False
+    if not from_email:
+        print("[email] RESEND_FROM is not set")
+        return False
+
+    resend.api_key = api_key
+
+    params: dict = {
+        "from": from_email,
+        "to": [to_email],
+        "subject": subject,
+    }
+    # Resend prefers html; but support text-only callers
+    if html:
+        params["html"] = html
+    else:
+        params["text"] = text
+    if reply_to:
+        params["reply_to"] = reply_to
+
+    try:
+        resp = resend.Emails.send(params)
+        # If the SDK returns an id, consider it success
+        if isinstance(resp, dict) and resp.get("id"):
+            return True
+        # Some SDK versions may return an object-like response
+        if hasattr(resp, "id") and getattr(resp, "id"):
+            return True
+        print(f"[email] Resend send returned unexpected response: {resp}")
+        return False
+    except Exception as e:
+        print(f"[email] Resend send failed: {e}")
+        return False
+
+
+def send_email(to_email: str, subject: str, text: str, html: str | None = None) -> bool:
+    """Send an email.
+
+    Uses Resend only.
+    """
+
+    return _send_via_resend(to_email, subject, text, html=html)
 
 
 def send_password_reset_code(to_email: str, code: str) -> bool:
     """Send a 6-digit password reset code.
 
-    If SMTP is not configured, prints the code to logs and returns True.
-
-    Env vars:
-      SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, SMTP_FROM
-      SMTP_TLS=true|false  (STARTTLS)
-      SMTP_SSL=true|false  (implicit TLS)
+    Requires RESEND_API_KEY and RESEND_FROM.
     """
 
-    host = os.getenv("SMTP_HOST")
-    if not host:
-        # Local/dev fallback
-        print(f"[password-reset] SMTP not configured; code for {to_email}: {code}")
-        return True
-
-    port = int(os.getenv("SMTP_PORT", "587"))
-    username = os.getenv("SMTP_USER")
-    password = os.getenv("SMTP_PASSWORD")
-    from_email = os.getenv("SMTP_FROM", username or "no-reply@example.com")
-
-    use_starttls = _env_bool("SMTP_TLS", True)
-    use_ssl = _env_bool("SMTP_SSL", False)
-
-    msg = EmailMessage()
-    msg["Subject"] = "Your password reset code"
-    msg["From"] = from_email
-    msg["To"] = to_email
-    msg.set_content(
+    subject = "Your password reset code"
+    text = (
         "Your Soldier Housing password reset code is:\n\n"
         f"{code}\n\n"
-        "This code expires in 10 minutes. If you didn\"t request this, you can ignore this email.\n"
+        "This code expires in 10 minutes. If you didn't request this, you can ignore this email.\n"
     )
-
-    try:
-        if use_ssl:
-            server = smtplib.SMTP_SSL(host, port, timeout=10)
-        else:
-            server = smtplib.SMTP(host, port, timeout=10)
-
-        with server:
-            server.ehlo()
-            if use_starttls and not use_ssl:
-                server.starttls()
-                server.ehlo()
-            if username and password:
-                server.login(username, password)
-            server.send_message(msg)
-        return True
-    except Exception as e:
-        print(f"[password-reset] email send failed: {e}")
-        return False
+    ok = send_email(to_email, subject, text)
+    if not ok:
+        print(f"[password-reset] email send failed for {to_email}")
+    return ok

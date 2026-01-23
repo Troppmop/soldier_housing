@@ -12,7 +12,7 @@ from .database import engine, get_db, SessionLocal
 from sqlalchemy import text
 from .auth import create_access_token, get_current_user
 from . import config
-from .emailer import send_password_reset_code
+from .emailer import send_password_reset_code, send_email
 
 app = FastAPI(title="Soldier Housing API")
 
@@ -126,7 +126,7 @@ def forgot_password(body: schemas.ForgotPasswordRequest, db: Session = Depends(g
         db.add(user)
         db.commit()
 
-        # Best-effort email (prints to logs if SMTP not configured)
+        # Best-effort email (Resend only; logs on failure)
         send_password_reset_code(body.email, code)
     return {"ok": True}
 
@@ -310,10 +310,26 @@ def apply_apartment(apartment_id: int, application: schemas.ApplicationCreate, d
     if existing:
         raise HTTPException(status_code=400, detail="Already applied to this apartment")
     a = crud.apply_to_apartment(db, applicant_id=current_user.id, apartment_id=apartment_id, message=application.message)
-    applicant = None
-    from .crud import list_notifications
     # return richer application output
     user = crud.get_user_by_email(db, current_user.email)
+
+    # Best-effort email notification to the apartment owner
+    try:
+        owner = db.query(models.User).filter(models.User.id == ap.owner_id).first() if ap.owner_id else None
+        if owner and owner.email:
+            applicant_name = (user.full_name if user and user.full_name else f"User #{current_user.id}")
+            msg = (application.message or "").strip()
+            body = (
+                f"You have a new application for your listing: {ap.title}\n\n"
+                f"From: {applicant_name} ({user.email if user else current_user.email})\n"
+            )
+            if msg:
+                body += f"\nMessage:\n{msg}\n"
+            body += "\nLog in to Soldier Housing to view/manage applications."
+            send_email(owner.email, f"New application for '{ap.title}'", body)
+    except Exception as e:
+        print(f"[email] apply notification failed: {e}")
+
     return {
         'id': a.id,
         'message': a.message,
@@ -355,6 +371,26 @@ def accept_application(application_id: int, db: Session = Depends(get_db), curre
     a = crud.accept_application(db, application_id, current_user.id)
     if not a:
         raise HTTPException(status_code=404, detail='Not found or not authorized')
+
+    # Best-effort email notification to applicant (accepted)
+    try:
+        ap = crud.get_apartment(db, a.apartment_id)
+        applicant = db.query(models.User).filter(models.User.id == a.applicant_id).first() if a.applicant_id else None
+        owner = db.query(models.User).filter(models.User.id == current_user.id).first() if current_user and getattr(current_user, 'id', None) else None
+        if applicant and applicant.email:
+            apt_title = ap.title if ap else f"Apartment #{a.apartment_id}"
+            owner_name = (owner.full_name if owner and owner.full_name else "the owner")
+            body = (
+                f"Good news — your application to '{apt_title}' was accepted.\n\n"
+                f"Accepted by: {owner_name}\n"
+            )
+            if owner and owner.phone:
+                body += f"Owner phone: {owner.phone}\n"
+            body += "\nLog in to Soldier Housing to view full details."
+            send_email(applicant.email, f"Application accepted: '{apt_title}'", body)
+    except Exception as e:
+        print(f"[email] accept notification failed: {e}")
+
     return {'ok': True}
 
 
@@ -512,4 +548,55 @@ def admin_clean_db(db: Session = Depends(get_db), current_user = Depends(get_cur
     db.query(models.User).filter(models.User.is_admin==False).delete(synchronize_session=False)
     db.commit()
     return {'ok': True}
+
+
+@app.post('/admin/email')
+def admin_send_email(payload: schemas.AdminSendEmailRequest, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
+    if not getattr(current_user, 'is_admin', False):
+        raise HTTPException(status_code=403, detail='Not authorized')
+
+    target = (payload.target or '').strip().lower()
+    subject = (payload.subject or '').strip()
+    message = (payload.message or '').strip()
+    include_admins = bool(payload.include_admins)
+
+    if target not in {'all', 'user'}:
+        raise HTTPException(status_code=400, detail="target must be 'all' or 'user'")
+    if not subject:
+        raise HTTPException(status_code=400, detail='subject is required')
+    if not message:
+        raise HTTPException(status_code=400, detail='message is required')
+
+    recipients = []
+    if target == 'user':
+        if not payload.user_id:
+            raise HTTPException(status_code=400, detail='user_id is required when target=user')
+        u = db.query(models.User).filter(models.User.id == payload.user_id).first()
+        if not u or not u.email:
+            raise HTTPException(status_code=404, detail='User not found')
+        recipients = [u]
+    else:
+        q = db.query(models.User)
+        if not include_admins:
+            q = q.filter(models.User.is_admin == False)  # noqa: E712
+        recipients = q.all()
+
+    # Guardrail: avoid accidentally blasting huge lists
+    if len(recipients) > 500:
+        raise HTTPException(status_code=400, detail='Too many recipients (max 500)')
+
+    sent = 0
+    failed = 0
+    for u in recipients:
+        try:
+            ok = send_email(u.email, subject, message)
+            if ok:
+                sent += 1
+            else:
+                failed += 1
+        except Exception as e:
+            failed += 1
+            print(f"[admin-email] failed to send to {getattr(u, 'email', None)}: {e}")
+
+    return {'ok': True, 'sent': sent, 'failed': failed}
 

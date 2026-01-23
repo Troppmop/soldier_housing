@@ -43,6 +43,8 @@ Default admin user (change during deployment):
        - `DATABASE_URL` (provided by Railway Postgres)
        - `SECRET_KEY` (set a strong random value)
        - `ADMIN_EMAIL`, `ADMIN_PASSWORD` (bootstrap an admin user)
+       - `RESEND_API_KEY`, `RESEND_FROM` (required for outbound emails)
+       - `RESEND_REPLY_TO` (optional)
        - `CORS_ORIGINS` (comma-separated): `https://<your-frontend-domain>,http://localhost:8080,http://localhost:5173`
     - Frontend service: use `frontend/Dockerfile.prod`. Set env vars:
        - `VITE_API_URL`: `https://<your-backend-domain>`
