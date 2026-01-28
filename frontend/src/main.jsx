@@ -8,12 +8,32 @@ import Login from './pages/Login'
 import Register from './pages/Register'
 import Apartments from './pages/Apartments'
 import CreateApartment from './pages/CreateApartment'
+import ExternalListings from './pages/ExternalListings'
+import CreateExternalListing from './pages/CreateExternalListing'
 import Applications from './pages/Applications'
 import Admin from './pages/Admin'
 import Profile from './pages/Profile'
 import { AuthProvider, useAuth } from './AuthContext'
 import BottomNav from './components/BottomNav'
 import ErrorBoundary from './components/ErrorBoundary'
+import { AppShellProvider } from './AppShellContext'
+import AppShellSync from './components/AppShellSync'
+
+import { FEATURES } from './featureFlags'
+import AppPlaceholder from './pages/AppPlaceholder'
+import CommunityFeed from './pages/CommunityFeed'
+import CommunityEvents from './pages/CommunityEvents'
+import CommunityMessages from './pages/CommunityMessages'
+
+import ResourcesDirectory from './pages/ResourcesDirectory'
+import ResourcesGuides from './pages/ResourcesGuides'
+import ResourcesSaved from './pages/ResourcesSaved'
+
+import JobsBrowse from './pages/JobsBrowse'
+import JobsPost from './pages/JobsPost'
+import JobsSaved from './pages/JobsSaved'
+
+const ENABLE_COMMUNITY = !!(FEATURES && FEATURES.community)
 
 // Top header removed — navigation now on bottom for mobile-first UX
 
@@ -40,9 +60,34 @@ function AppRoutes(){
           <Route path="/login" element={<Login/>} />
           <Route path="/register" element={<Register/>} />
           <Route path="/create" element={<CreateApartment/>} />
+          <Route path="/external" element={<ExternalListings/>} />
+          <Route path="/external/new" element={<CreateExternalListing/>} />
           <Route path="/applications" element={<Applications/>} />
           <Route path="/admin" element={<Admin/>} />
           <Route path="/profile" element={<Profile/>} />
+
+          {/* Side apps */}
+          {ENABLE_COMMUNITY ? (
+            <>
+              <Route path="/community" element={<CommunityFeed/>} />
+              <Route path="/community/events" element={<CommunityEvents/>} />
+              <Route path="/community/messages" element={<CommunityMessages/>} />
+            </>
+          ) : (
+            <>
+              <Route path="/community" element={<AppPlaceholder title="Community" subtitle="Temporarily unavailable." />} />
+              <Route path="/community/events" element={<AppPlaceholder title="Community" subtitle="Temporarily unavailable." />} />
+              <Route path="/community/messages" element={<AppPlaceholder title="Community" subtitle="Temporarily unavailable." />} />
+            </>
+          )}
+
+          <Route path="/resources" element={<ResourcesDirectory/>} />
+          <Route path="/resources/guides" element={<ResourcesGuides/>} />
+          <Route path="/resources/saved" element={<ResourcesSaved/>} />
+
+          <Route path="/jobs" element={<JobsBrowse/>} />
+          <Route path="/jobs/post" element={<JobsPost/>} />
+          <Route path="/jobs/saved" element={<JobsSaved/>} />
           </Routes>
         </ErrorBoundary>
       </main>
@@ -59,10 +104,13 @@ function AppRoutes(){
 function Root(){
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <AppRoutes />
-        <BottomNav />
-      </BrowserRouter>
+      <AppShellProvider>
+        <BrowserRouter>
+          <AppShellSync />
+          <AppRoutes />
+          <BottomNav />
+        </BrowserRouter>
+      </AppShellProvider>
     </AuthProvider>
   )
 }

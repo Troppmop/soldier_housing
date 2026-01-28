@@ -15,7 +15,7 @@ export default function Applications(){
   async function accept(id){
     try{
       await acceptApplication(id)
-      alert('Accepted — phone numbers will be shared')
+      alert('Accepted')
       fetchList()
     }catch(e){ alert('Accept failed') }
   }
@@ -33,7 +33,6 @@ export default function Applications(){
                   <div className="font-medium">{a.applicant_name || `user#${a.applicant_id}`}</div>
                   <div className="text-sm text-slate-500">{a.message}</div>
                   <div className="text-xs text-slate-400">Status: {a.status}</div>
-                  {a.applicant_phone && <div className="text-sm mt-1">Phone: {a.applicant_phone}</div>}
                 </div>
                 <div>
                   {a.status !== 'accepted' && <button onClick={()=>accept(a.id)} className="bg-emerald-700 text-white px-3 py-1 rounded">Accept</button>}

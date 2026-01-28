@@ -1,7 +1,10 @@
 from sqlalchemy.orm import Session
+from sqlalchemy import func, or_
+from sqlalchemy.exc import IntegrityError
 from . import models, schemas
 from passlib.context import CryptContext
 from datetime import datetime
+from . import push
 
 # Support both Argon2 and bcrypt so existing bcrypt-hashed passwords still verify.
 # Prefer Argon2 for new hashes but accept bcrypt for legacy users during migration.
@@ -26,7 +29,16 @@ def create_user(db: Session, user: schemas.UserCreate, is_admin: bool=False):
         warnings.warn("Password exceeded bcrypt 72-byte limit; truncated before hashing.")
     else:
         hashed = pwd_context.hash(pw)
-    db_user = models.User(email=user.email, full_name=user.full_name, phone=getattr(user, 'phone', None), hashed_password=hashed, is_admin=is_admin)
+    # Store phone number privately (not returned in normal user responses)
+    phone_number = getattr(user, 'phone_number', None)
+    db_user = models.User(
+        email=user.email,
+        full_name=user.full_name,
+        hashed_password=hashed,
+        is_admin=is_admin,
+        phone_number=phone_number,
+        phone_verified=True if phone_number else False,
+    )
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
@@ -70,6 +82,16 @@ def apply_to_apartment(db: Session, applicant_id: int, apartment_id: int, messag
         )
         db.add(note)
         db.commit()
+        try:
+            push.send_push_to_user(
+                db,
+                apartment.owner_id,
+                title="Soldier Housing",
+                message=note.message,
+                url="/",
+            )
+        except Exception:
+            pass
     return app
 
 def list_applications_for_owner(db: Session, owner_id: int):
@@ -87,7 +109,7 @@ def list_applications_for_owner(db: Session, owner_id: int):
                 'status': a.status,
                 'applicant_id': a.applicant_id,
                 'applicant_name': applicant.full_name if applicant else None,
-                'applicant_phone': applicant.phone if applicant and a.status=='accepted' else None,
+                'applicant_phone': None,
                 'apartment_id': a.apartment_id,
             })
         result.append({'apartment': {'id': ap.id, 'title': ap.title}, 'applications': apps_out})
@@ -113,7 +135,58 @@ def accept_application(db: Session, application_id: int, owner_id: int):
     )
     db.add(note)
     db.commit()
+    try:
+        push.send_push_to_user(
+            db,
+            a.applicant_id,
+            title="Soldier Housing",
+            message=note.message,
+            url="/",
+        )
+    except Exception:
+        pass
     return a
+
+
+def upsert_push_subscription(db: Session, user_id: int, endpoint: str, p256dh: str, auth: str):
+    endpoint = (endpoint or '').strip()
+    p256dh = (p256dh or '').strip()
+    auth = (auth or '').strip()
+    if not endpoint or not p256dh or not auth:
+        raise ValueError('Invalid subscription')
+
+    existing = db.query(models.PushSubscription).filter(models.PushSubscription.endpoint == endpoint).first()
+    if existing:
+        existing.user_id = user_id
+        existing.p256dh = p256dh
+        existing.auth = auth
+        db.add(existing)
+        db.commit()
+        db.refresh(existing)
+        return existing
+
+    sub = models.PushSubscription(user_id=user_id, endpoint=endpoint, p256dh=p256dh, auth=auth)
+    db.add(sub)
+    db.commit()
+    db.refresh(sub)
+    return sub
+
+
+def delete_push_subscription(db: Session, user_id: int, endpoint: str) -> bool:
+    endpoint = (endpoint or '').strip()
+    if not endpoint:
+        return False
+    sub = (
+        db.query(models.PushSubscription)
+        .filter(models.PushSubscription.user_id == user_id)
+        .filter(models.PushSubscription.endpoint == endpoint)
+        .first()
+    )
+    if not sub:
+        return False
+    db.delete(sub)
+    db.commit()
+    return True
 
 def list_applications_for_apartment(db: Session, apartment_id: int):
     return db.query(models.Application).filter(models.Application.apartment_id==apartment_id).all()
@@ -140,12 +213,206 @@ def get_application(db: Session, application_id: int):
 def update_user(db: Session, user_obj: models.User, updates: dict):
     if 'full_name' in updates:
         user_obj.full_name = updates.get('full_name')
-    if 'phone' in updates:
-        user_obj.phone = updates.get('phone')
     db.add(user_obj)
     db.commit()
     db.refresh(user_obj)
     return user_obj
+
+
+def get_my_phone(db: Session, user_id: int):
+    u = db.query(models.User).filter(models.User.id == user_id).first()
+    if not u:
+        return None
+    return {"phone_number": u.phone_number, "phone_verified": bool(getattr(u, 'phone_verified', False))}
+
+
+def set_my_phone(db: Session, user_id: int, phone_number: str):
+    u = db.query(models.User).filter(models.User.id == user_id).first()
+    if not u:
+        return None
+    # Minimal "verification" for now: treat a provided number as verified.
+    # If you later add real SMS verification, set phone_verified only after code confirm.
+    u.phone_number = (phone_number or '').strip()
+    u.phone_verified = True if u.phone_number else False
+    db.add(u)
+    db.commit()
+    db.refresh(u)
+    return {"phone_number": u.phone_number, "phone_verified": bool(getattr(u, 'phone_verified', False))}
+
+
+def create_external_listing(db: Session, created_by_user_id: int, payload: schemas.ExternalListingCreate):
+    listing = models.ExternalListing(
+        created_by_user_id=created_by_user_id,
+        source=(payload.source or '').strip().lower(),
+        url=(payload.url or '').strip(),
+        title=(payload.title or None),
+        price=payload.price,
+        location=(payload.location or None),
+        notes=(payload.notes or None),
+    )
+    db.add(listing)
+    db.commit()
+    db.refresh(listing)
+    return listing
+
+
+def list_external_listings(db: Session, skip: int = 0, limit: int = 20, search: str | None = None):
+    q = db.query(models.ExternalListing)
+    s = (search or '').strip()
+    if s:
+        like = f"%{s}%"
+        q = q.filter(
+            or_(
+                models.ExternalListing.title.ilike(like),
+                models.ExternalListing.url.ilike(like),
+                models.ExternalListing.location.ilike(like),
+                models.ExternalListing.notes.ilike(like),
+                models.ExternalListing.source.ilike(like),
+            )
+        )
+    q = q.order_by(models.ExternalListing.created_at.desc())
+    total = q.count()
+    items = q.offset(skip).limit(limit).all()
+    return items, total
+
+
+def get_external_listing(db: Session, listing_id):
+    return db.query(models.ExternalListing).filter(models.ExternalListing.id == listing_id).first()
+
+
+def get_interest_counts(db: Session, listing_ids: list):
+    if not listing_ids:
+        return {}
+    rows = (
+        db.query(models.ExternalListingInterest.listing_id, func.count(models.ExternalListingInterest.id))
+        .filter(models.ExternalListingInterest.listing_id.in_(listing_ids))
+        .group_by(models.ExternalListingInterest.listing_id)
+        .all()
+    )
+    return {r[0]: int(r[1]) for r in rows}
+
+
+def get_user_interests_map(db: Session, user_id: int, listing_ids: list):
+    if not listing_ids:
+        return set()
+    rows = (
+        db.query(models.ExternalListingInterest.listing_id)
+        .filter(models.ExternalListingInterest.user_id == user_id)
+        .filter(models.ExternalListingInterest.listing_id.in_(listing_ids))
+        .all()
+    )
+    return {r[0] for r in rows}
+
+
+def add_interest(db: Session, listing_id, user_id: int) -> bool:
+    try:
+        row = models.ExternalListingInterest(listing_id=listing_id, user_id=user_id)
+        db.add(row)
+        db.commit()
+        return True
+    except IntegrityError:
+        db.rollback()
+        return False
+
+
+def remove_interest(db: Session, listing_id, user_id: int) -> bool:
+    deleted = (
+        db.query(models.ExternalListingInterest)
+        .filter(models.ExternalListingInterest.listing_id == listing_id)
+        .filter(models.ExternalListingInterest.user_id == user_id)
+        .delete()
+    )
+    db.commit()
+    return bool(deleted)
+
+
+def _user_phone_ready(u: models.User) -> bool:
+    return bool(getattr(u, 'phone_number', None)) and bool(getattr(u, 'phone_verified', False))
+
+
+def create_contact_request(db: Session, requester_user_id: int, target_user_id: int, listing_id):
+    if requester_user_id == target_user_id:
+        raise ValueError('Cannot request contact with yourself')
+
+    requester = db.query(models.User).filter(models.User.id == requester_user_id).first()
+    target = db.query(models.User).filter(models.User.id == target_user_id).first()
+    if not requester or not target:
+        raise ValueError('User not found')
+
+    if not _user_phone_ready(requester) or not _user_phone_ready(target):
+        raise PermissionError('Both users must have a verified phone number')
+
+    listing = get_external_listing(db, listing_id)
+    if not listing:
+        raise ValueError('Listing not found')
+    if listing.created_by_user_id != target_user_id:
+        # keep it tight: contact exchange is only with the user who posted the listing
+        raise PermissionError('Target user must be the listing creator')
+
+    existing = (
+        db.query(models.ContactRequest)
+        .filter(models.ContactRequest.requester_user_id == requester_user_id)
+        .filter(models.ContactRequest.target_user_id == target_user_id)
+        .filter(models.ContactRequest.listing_id == listing_id)
+        .first()
+    )
+    if existing:
+        return existing
+
+    cr = models.ContactRequest(
+        requester_user_id=requester_user_id,
+        target_user_id=target_user_id,
+        listing_id=listing_id,
+        status='pending',
+    )
+    db.add(cr)
+    db.commit()
+    db.refresh(cr)
+    return cr
+
+
+def list_incoming_contact_requests(db: Session, user_id: int):
+    return (
+        db.query(models.ContactRequest)
+        .filter(models.ContactRequest.target_user_id == user_id)
+        .filter(models.ContactRequest.status == 'pending')
+        .order_by(models.ContactRequest.created_at.desc())
+        .all()
+    )
+
+
+def accept_contact_request(db: Session, request_id, current_user_id: int):
+    cr = db.query(models.ContactRequest).filter(models.ContactRequest.id == request_id).first()
+    if not cr or cr.target_user_id != current_user_id:
+        return None
+
+    target = db.query(models.User).filter(models.User.id == cr.target_user_id).first()
+    requester = db.query(models.User).filter(models.User.id == cr.requester_user_id).first()
+    if not target or not requester:
+        raise ValueError('User not found')
+    if not _user_phone_ready(target) or not _user_phone_ready(requester):
+        raise PermissionError('Both users must have a verified phone number')
+
+    cr.status = 'accepted'
+    db.add(cr)
+    db.commit()
+    db.refresh(cr)
+    return cr
+
+
+def decline_contact_request(db: Session, request_id, current_user_id: int):
+    cr = db.query(models.ContactRequest).filter(models.ContactRequest.id == request_id).first()
+    if not cr or cr.target_user_id != current_user_id:
+        return None
+    cr.status = 'declined'
+    db.add(cr)
+    db.commit()
+    db.refresh(cr)
+    return cr
+
+
+def get_contact_request(db: Session, request_id):
+    return db.query(models.ContactRequest).filter(models.ContactRequest.id == request_id).first()
 
 
 def change_user_password(db: Session, user_obj: models.User, current_password: str, new_password: str):

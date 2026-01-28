@@ -77,6 +77,59 @@ export async function getPublicStats(){
   return API.get('/stats')
 }
 
+// External Listings
+export async function createExternalListing(payload){
+  return API.post('/external-listings', payload, authHeaders())
+}
+
+export async function listExternalListings(skip=0, limit=50, q){
+  const qs = new URLSearchParams({ skip: String(skip), limit: String(limit) })
+  if(q && String(q).trim()) qs.set('q', String(q).trim())
+  return API.get(`/external-listings?${qs.toString()}`, authHeaders())
+}
+
+export async function getExternalListing(id){
+  return API.get(`/external-listings/${id}`, authHeaders())
+}
+
+export async function addExternalInterest(id){
+  return API.post(`/external-listings/${id}/interest`, {}, authHeaders())
+}
+
+export async function removeExternalInterest(id){
+  return API.delete(`/external-listings/${id}/interest`, authHeaders())
+}
+
+// Phone (private)
+export async function getMyPhone(){
+  return API.get('/users/me/phone', authHeaders())
+}
+
+export async function setMyPhone(phone_number){
+  return API.put('/users/me/phone', { phone_number }, authHeaders())
+}
+
+// Contact Requests
+export async function createContactRequest(payload){
+  return API.post('/contact-requests', payload, authHeaders())
+}
+
+export async function listIncomingContactRequests(){
+  return API.get('/contact-requests/incoming', authHeaders())
+}
+
+export async function acceptContactRequest(id){
+  return API.post(`/contact-requests/${id}/accept`, {}, authHeaders())
+}
+
+export async function declineContactRequest(id){
+  return API.post(`/contact-requests/${id}/decline`, {}, authHeaders())
+}
+
+export async function getContactInfo(id){
+  return API.get(`/contact-requests/${id}/contact`, authHeaders())
+}
+
 export function authHeaders(){
   const token = localStorage.getItem('token')
   return { headers: { Authorization: `Bearer ${token}` } }
@@ -85,8 +138,8 @@ export function authHeaders(){
 export async function register(email, password){
   // accept optional full_name and phone via arguments object
   if (typeof password === 'object'){
-    const { password: pw, full_name, phone } = password
-    return API.post('/auth/register', { email, password: pw, full_name, phone })
+    const { password: pw, full_name, phone, phone_number } = password
+    return API.post('/auth/register', { email, password: pw, full_name, phone_number: phone_number || phone || null })
   }
   return API.post('/auth/register', { email, password })
 }
@@ -198,4 +251,197 @@ export async function adminCleanDB(){
 
 export async function adminSendEmail(payload){
   return API.post('/admin/email', payload, authHeaders())
+}
+
+export async function adminSendNotification(payload){
+  return API.post('/admin/notifications', payload, authHeaders())
+}
+
+export async function getVapidPublicKey(){
+  return API.get('/push/vapid-public-key')
+}
+
+export async function pushSubscribe(subscription){
+  return API.post('/push/subscribe', subscription, authHeaders())
+}
+
+export async function pushUnsubscribe(endpoint){
+  return API.post('/push/unsubscribe', { endpoint }, authHeaders())
+}
+
+// -----------------------------
+// Community app
+// -----------------------------
+
+export async function communityListPosts(skip=0, limit=50, q){
+  const qs = new URLSearchParams({ skip: String(skip), limit: String(limit) })
+  if(q && String(q).trim()) qs.set('q', String(q).trim())
+  return API.get(`/community/posts?${qs.toString()}`, authHeaders())
+}
+
+export async function communityCreatePost(payload){
+  return API.post('/community/posts', payload, authHeaders())
+}
+
+export async function communityListComments(postId){
+  return API.get(`/community/posts/${postId}/comments`, authHeaders())
+}
+
+export async function communityAddComment(postId, payload){
+  return API.post(`/community/posts/${postId}/comments`, payload, authHeaders())
+}
+
+export async function communityListEvents(q){
+  const s = (q || '').trim()
+  const qs = s ? `?q=${encodeURIComponent(s)}` : ''
+  return API.get(`/community/events${qs}`, authHeaders())
+}
+
+export async function communityCreateEvent(payload){
+  return API.post('/community/events', payload, authHeaders())
+}
+
+export async function communityListUsers(){
+  return API.get('/community/users', authHeaders())
+}
+
+export async function communityInbox(){
+  return API.get('/community/messages/inbox', authHeaders())
+}
+
+export async function communitySent(){
+  return API.get('/community/messages/sent', authHeaders())
+}
+
+export async function communitySendMessage(payload){
+  return API.post('/community/messages', payload, authHeaders())
+}
+
+export async function communityMarkMessageRead(id){
+  return API.post(`/community/messages/${id}/read`, {}, authHeaders())
+}
+
+export async function adminCommunityPosts(){
+  return API.get('/admin/community/posts', authHeaders())
+}
+
+export async function adminPinCommunityPost(postId, is_pinned){
+  return API.post(`/admin/community/posts/${postId}/pin`, { is_pinned }, authHeaders())
+}
+
+export async function adminDeleteCommunityPost(postId){
+  return API.delete(`/admin/community/posts/${postId}`, authHeaders())
+}
+
+export async function adminCommunityEvents(status){
+  const q = status ? `?status=${encodeURIComponent(status)}` : ''
+  return API.get(`/admin/community/events${q}`, authHeaders())
+}
+
+export async function adminApproveCommunityEvent(eventId){
+  return API.post(`/admin/community/events/${eventId}/approve`, {}, authHeaders())
+}
+
+export async function adminRejectCommunityEvent(eventId){
+  return API.post(`/admin/community/events/${eventId}/reject`, {}, authHeaders())
+}
+
+// -----------------------------
+// Resources app
+// -----------------------------
+
+export async function resourcesListItems(category, q){
+  const qs = new URLSearchParams()
+  if(category) qs.set('category', category)
+  if(q && String(q).trim()) qs.set('q', String(q).trim())
+  const suffix = qs.toString() ? `?${qs.toString()}` : ''
+  return API.get(`/resources/items${suffix}`, authHeaders())
+}
+
+export async function resourcesCreateItem(payload){
+  return API.post('/resources/items', payload, authHeaders())
+}
+
+export async function resourcesSaveItem(id){
+  return API.post(`/resources/items/${id}/save`, {}, authHeaders())
+}
+
+export async function resourcesUnsaveItem(id){
+  return API.delete(`/resources/items/${id}/save`, authHeaders())
+}
+
+export async function resourcesSaved(){
+  return API.get('/resources/saved', authHeaders())
+}
+
+export async function adminResourcesItems(status){
+  const q = status ? `?status=${encodeURIComponent(status)}` : ''
+  return API.get(`/admin/resources/items${q}`, authHeaders())
+}
+
+export async function adminApproveResource(id){
+  return API.post(`/admin/resources/items/${id}/approve`, {}, authHeaders())
+}
+
+export async function adminRejectResource(id){
+  return API.post(`/admin/resources/items/${id}/reject`, {}, authHeaders())
+}
+
+export async function adminDeleteResource(id){
+  return API.delete(`/admin/resources/items/${id}`, authHeaders())
+}
+
+// -----------------------------
+// Jobs app
+// -----------------------------
+
+export async function jobsList(q){
+  const s = (q || '').trim()
+  const qs = s ? `?q=${encodeURIComponent(s)}` : ''
+  return API.get(`/jobs/listings${qs}`, authHeaders())
+}
+
+export async function jobsCreate(payload){
+  return API.post('/jobs/listings', payload, authHeaders())
+}
+
+export async function jobsSave(id){
+  return API.post(`/jobs/listings/${id}/save`, {}, authHeaders())
+}
+
+export async function jobsUnsave(id){
+  return API.delete(`/jobs/listings/${id}/save`, authHeaders())
+}
+
+export async function jobsSaved(){
+  return API.get('/jobs/saved', authHeaders())
+}
+
+export async function jobsApply(id, payload){
+  return API.post(`/jobs/listings/${id}/apply`, payload || {}, authHeaders())
+}
+
+export async function jobsListApplications(id){
+  return API.get(`/jobs/listings/${id}/applications`, authHeaders())
+}
+
+export async function jobsMyApplications(){
+  return API.get('/jobs/my-applications', authHeaders())
+}
+
+export async function adminJobsListings(status){
+  const q = status ? `?status=${encodeURIComponent(status)}` : ''
+  return API.get(`/admin/jobs/listings${q}`, authHeaders())
+}
+
+export async function adminApproveJob(id){
+  return API.post(`/admin/jobs/listings/${id}/approve`, {}, authHeaders())
+}
+
+export async function adminRejectJob(id){
+  return API.post(`/admin/jobs/listings/${id}/reject`, {}, authHeaders())
+}
+
+export async function adminDeleteJob(id){
+  return API.delete(`/admin/jobs/listings/${id}`, authHeaders())
 }
